@@ -172,5 +172,8 @@ not-iterable = "ignore"
 [tool.ruff]
 exclude = ["*"]
 
+[tool.ruff.lint.per-file-ignores]
+"environments/tool_context.py" = ["F401"]
+
 [tool.uv]
 exclude-newer = "7 days"
