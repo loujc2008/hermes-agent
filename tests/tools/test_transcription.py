@@ -12,6 +12,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch, mock_open
 
 import pytest
+pytest.importorskip("faster_whisper")
 
 
 def _fake_faster_whisper_module(mock_model):
@@ -131,6 +132,8 @@ class TestValidateAudioFile:
 
 
 class TestTranscribeLocal:
+
+    import pytest
 
     def test_successful_transcription(self, tmp_path):
         audio_file = tmp_path / "test.ogg"
@@ -289,6 +292,8 @@ class TestNormalizeLocalModel:
         with caplog.at_level(logging.WARNING, logger="tools.transcription_tools"):
             _normalize_local_model("whisper-1")
         assert any("whisper-1" in r.message for r in caplog.records)
+
+    import pytest
 
     def test_local_transcribe_normalises_model(self):
         """transcribe_audio with local provider must not pass 'whisper-1' to WhisperModel."""

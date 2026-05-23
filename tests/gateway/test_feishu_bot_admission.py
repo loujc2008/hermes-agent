@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+pytest.importorskip("lark_oapi")
 
 from tests.gateway.feishu_helpers import (
     install_dedup_state,
@@ -503,7 +504,15 @@ def test_hydrate_bot_identity_populates_self_ids_from_bot_v3_info(monkeypatch):
 
     adapter._client = SimpleNamespace(request=_fake_request)
 
-    asyncio.run(adapter._hydrate_bot_identity())
+    # _hydrate_bot_identity uses asyncio.to_thread to call the synchronous client method.
+    # We must patch asyncio.to_thread to call our fake request directly in the same thread.
+    import unittest.mock
+    async def _mock_to_thread(func, *args, **kwargs):
+        # We assume func is adapter._client.request
+        return _fake_request(args[0] if args else None)
+
+    with unittest.mock.patch("asyncio.to_thread", new=_mock_to_thread):
+        asyncio.run(adapter._hydrate_bot_identity())
 
     assert captured["uri"] == "/open-apis/bot/v3/info"
     assert str(captured["http_method"]).endswith("GET")
