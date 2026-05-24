@@ -2903,6 +2903,8 @@ class TestAuxUnhealthyCache:
         )
         _mark_provider_unhealthy("openrouter", ttl=0.01)
         assert _is_provider_unhealthy("openrouter") is True
+        import time; time.sleep(0.02)
+        assert _is_provider_unhealthy("openrouter") is False
         import time
         time.sleep(0.02)
         # Lazy eviction: first lookup after expiry returns False AND removes the entry.
