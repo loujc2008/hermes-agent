@@ -29,9 +29,12 @@ Usage:
 import json
 import logging
 import os
+import sys
+import time
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Literal
 
 import fire
 from dotenv import load_dotenv
@@ -352,8 +355,7 @@ class MiniSWERunner:
                     
                     # Add tool calls in XML format
                     for tool_call in msg["tool_calls"]:
-                        if not tool_call or not isinstance(tool_call, dict):
-                            continue
+                        if not tool_call or not isinstance(tool_call, dict): continue
                         try:
                             arguments = json.loads(tool_call["function"]["arguments"]) \
                                 if isinstance(tool_call["function"]["arguments"], str) \

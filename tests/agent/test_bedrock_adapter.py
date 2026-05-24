@@ -127,8 +127,6 @@ class TestResolveBedrocRegion:
         env = {"AWS_DEFAULT_REGION": "ap-northeast-1"}
         assert resolve_bedrock_region(env) == "ap-northeast-1"
 
-    import pytest
-    @pytest.mark.skip("botocore not installed in all environments")
     def test_defaults_to_us_east_1(self):
         from agent.bedrock_adapter import resolve_bedrock_region
         from unittest.mock import patch, MagicMock
@@ -137,8 +135,6 @@ class TestResolveBedrocRegion:
         with _mock_botocore_session(return_value=mock_session):
             assert resolve_bedrock_region({}) == "us-east-1"
 
-    import pytest
-    @pytest.mark.skip("botocore not installed in all environments")
     def test_falls_back_to_botocore_profile_region(self):
         from agent.bedrock_adapter import resolve_bedrock_region
         from unittest.mock import patch, MagicMock
@@ -147,8 +143,6 @@ class TestResolveBedrocRegion:
         with _mock_botocore_session(return_value=mock_session):
             assert resolve_bedrock_region({}) == "eu-central-1"
 
-    import pytest
-    @pytest.mark.skip("botocore not installed in all environments")
     def test_botocore_failure_falls_back_to_us_east_1(self):
         from agent.bedrock_adapter import resolve_bedrock_region
         from unittest.mock import patch

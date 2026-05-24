@@ -6,7 +6,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 
 import pytest
-pytest.importorskip("dingtalk")
 
 from gateway.config import Platform, PlatformConfig
 
@@ -408,6 +407,36 @@ class TestConnect:
         assert len(adapter._dedup._seen) == 0
         assert adapter._http_client is None
 
+    @pytest.mark.asyncio
+    async def test_disconnect_finalizes_open_streaming_cards(self):
+        """Streaming cards must be finalized before HTTP client closes."""
+        from unittest.mock import AsyncMock, patch
+        from gateway.platforms.dingtalk import DingTalkAdapter
+        adapter = DingTalkAdapter(PlatformConfig(enabled=True))
+        adapter._http_client = AsyncMock()
+        adapter._stream_task = None
+        adapter._streaming_cards = {
+            "chat-1": {"track-a": "last content"},
+            "chat-2": {"track-b": "other"},
+        }
+
+        close_calls = []
+
+        async def fake_close_siblings(chat_id):
+            # HTTP client must still be alive at call time.
+            assert adapter._http_client is not None, (
+                "HTTP client was already closed before card finalization"
+            )
+            close_calls.append(chat_id)
+            adapter._streaming_cards.pop(chat_id, None)
+
+        with patch.object(adapter, "_close_streaming_siblings", side_effect=fake_close_siblings):
+            await adapter.disconnect()
+
+        assert set(close_calls) == {"chat-1", "chat-2"}
+        assert adapter._streaming_cards == {}
+        assert adapter._http_client is None
+
 
 # ---------------------------------------------------------------------------
 # Platform enum
@@ -760,7 +789,6 @@ class TestIncomingHandlerProcess:
     so the SDK ACK is returned immediately."""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip("dingtalk packages are not installed in standard dev environment")
     async def test_process_extracts_session_webhook(self):
         """session_webhook must be populated from callback data."""
         from gateway.platforms.dingtalk import _IncomingHandler, DingTalkAdapter
@@ -792,7 +820,6 @@ class TestIncomingHandlerProcess:
         assert chatbot_msg.session_webhook == "https://oapi.dingtalk.com/robot/sendBySession?session=abc"
 
     @pytest.mark.asyncio
-    @pytest.mark.skip("dingtalk packages are not installed in standard dev environment")
     async def test_process_fallback_session_webhook_when_from_dict_misses_it(self):
         """If ChatbotMessage.from_dict does not map sessionWebhook (e.g. SDK
         version mismatch), the handler should fall back to extracting it
@@ -822,7 +849,6 @@ class TestIncomingHandlerProcess:
         assert chatbot_msg.session_webhook == "https://oapi.dingtalk.com/robot/sendBySession?session=def"
 
     @pytest.mark.asyncio
-    @pytest.mark.skip("dingtalk packages are not installed in standard dev environment")
     async def test_process_returns_ack_immediately(self):
         """process() must not block on _on_message — it should return
         the ACK tuple before the message is fully processed."""
@@ -953,7 +979,6 @@ class TestCardLifecycle:
         return a
 
     @pytest.mark.asyncio
-    @pytest.mark.skip("dingtalk packages are not installed in standard dev environment")
     async def test_final_reply_finalizes_card(self, adapter_with_card):
         """send(reply_to=...) creates a closed card (final response path)."""
         a = adapter_with_card
@@ -965,7 +990,6 @@ class TestCardLifecycle:
         assert "chat-1" not in a._streaming_cards
 
     @pytest.mark.asyncio
-    @pytest.mark.skip("dingtalk packages are not installed in standard dev environment")
     async def test_intermediate_send_stays_streaming(self, adapter_with_card):
         """send() without reply_to creates an OPEN card (tool progress /
         commentary / streaming first chunk).  No flicker closed→streaming
@@ -979,7 +1003,6 @@ class TestCardLifecycle:
         assert result.message_id in a._streaming_cards.get("chat-1", {})
 
     @pytest.mark.asyncio
-    @pytest.mark.skip("dingtalk packages are not installed in standard dev environment")
     async def test_done_fires_only_when_reply_to_is_set(self, adapter_with_card):
         """reply_to distinguishes final response (base.py) from tool-progress
         sends (run.py).  Done must only fire for the former."""
@@ -996,7 +1019,6 @@ class TestCardLifecycle:
         assert fired == ["chat-1"]
 
     @pytest.mark.asyncio
-    @pytest.mark.skip("dingtalk packages are not installed in standard dev environment")
     async def test_edit_message_finalize_fires_done(self, adapter_with_card):
         """Stream consumer's final edit_message(finalize=True) fires Done."""
         a = adapter_with_card
@@ -1016,7 +1038,6 @@ class TestCardLifecycle:
         assert "chat-1" in fired
 
     @pytest.mark.asyncio
-    @pytest.mark.skip("dingtalk packages are not installed in standard dev environment")
     async def test_edit_message_finalize_false_tracks_sibling(self, adapter_with_card):
         """After edit_message(finalize=False), card is tracked as open."""
         a = adapter_with_card
@@ -1028,7 +1049,6 @@ class TestCardLifecycle:
         assert a._streaming_cards["chat-1"].get("track-1") == "partial"
 
     @pytest.mark.asyncio
-    @pytest.mark.skip("dingtalk packages are not installed in standard dev environment")
     async def test_next_send_auto_closes_sibling_streaming_cards(
         self, adapter_with_card,
     ):
@@ -1124,7 +1144,6 @@ class TestDingTalkAdapterAICards:
         return msg
 
     @pytest.mark.asyncio
-    @pytest.mark.skip("dingtalk packages are not installed in standard dev environment")
     async def test_send_uses_ai_card_if_configured(self, config, mock_stream_client, mock_http_client, mock_message):
         from gateway.platforms.dingtalk import DingTalkAdapter
 
