@@ -1042,13 +1042,8 @@ class TeamsAdapter(BasePlatformAdapter):
                 # Local path — encode as base64 data URI
                 path = image_url.removeprefix("file://")
                 mime_type = mimetypes.guess_type(path)[0] or "image/png"
-                import asyncio
-
-                def _read_and_encode_image(p: str, m: str) -> str:
-                    with open(p, "rb") as f:
-                        return f"data:{m};base64,{base64.b64encode(f.read()).decode()}"
-
-                content_url = await asyncio.to_thread(_read_and_encode_image, path, mime_type)
+                with open(path, "rb") as f:
+                    content_url = f"data:{mime_type};base64,{base64.b64encode(f.read()).decode()}"
 
             attachment = Attachment(content_type=mime_type, content_url=content_url)
             activity = MessageActivityInput().add_attachments(attachment)

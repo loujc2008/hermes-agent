@@ -344,8 +344,7 @@ import requests
 def doi_to_bibtex(doi: str) -> str:
     response = requests.get(
         f"https://doi.org/{doi}",
-        headers={"Accept": "application/x-bibtex"},
-        timeout=10
+        headers={"Accept": "application/x-bibtex"}
     )
     response.raise_for_status()
     return response.text
@@ -2208,7 +2207,7 @@ for paper in results:
     doi = paper.externalIds.get('DOI', 'N/A')
     if doi != 'N/A':
         bibtex = requests.get(f"https://doi.org/{doi}", 
-                              headers={"Accept": "application/x-bibtex"}, timeout=10).text
+                              headers={"Accept": "application/x-bibtex"}).text
         print(bibtex)
 ```
 
