@@ -8,6 +8,7 @@ import os
 import queue
 import subprocess
 import sys
+import shlex
 import threading
 import time
 import uuid
@@ -6765,8 +6766,15 @@ def _(rid, params: dict) -> dict:
     except ImportError:
         pass
     try:
+        if isinstance(cmd, str):
+            cmd = shlex.split(cmd)
         r = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=30, cwd=os.getcwd()
+            cmd,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=os.getcwd(),
         )
         return _ok(
             rid,
