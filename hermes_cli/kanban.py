@@ -2052,8 +2052,9 @@ def _cmd_archive(args: argparse.Namespace) -> int:
     failed: list[str] = []
     with kb.connect() as conn:
         if purge_ids:
+            deleted_set = kb.delete_archived_tasks_bulk(conn, purge_ids)
             for tid in purge_ids:
-                if not kb.delete_archived_task(conn, tid):
+                if tid not in deleted_set:
                     failed.append(tid)
                     print(f"cannot delete {tid} (must already be archived)", file=sys.stderr)
                 else:
