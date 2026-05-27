@@ -3556,8 +3556,12 @@ class ImageFileHandler(MediaSendHandler):
         if not os.path.isfile(image_path):
             raise ValueError(f"File not found: {image_path}")
         logger.info("[%s] ImageFileHandler: reading %s", adapter.name, image_path)
-        with open(image_path, "rb") as f:
-            file_bytes = f.read()
+
+        def _read_image():
+            with open(image_path, "rb") as f:
+                return f.read()
+
+        file_bytes = await asyncio.to_thread(_read_image)
         filename = os.path.basename(image_path) or "image.jpg"
         content_type = guess_mime_type(filename) or "image/jpeg"
         return file_bytes, filename, content_type
@@ -3581,7 +3585,8 @@ class FileUrlHandler(MediaSendHandler):
         file_url: str = kwargs["file_url"]
         logger.info("[%s] FileUrlHandler: downloading %s", adapter.name, file_url)
         file_bytes, content_type = await media_download_url(
-            file_url, max_size_mb=adapter.MEDIA_MAX_SIZE_MB,
+            file_url,
+            max_size_mb=adapter.MEDIA_MAX_SIZE_MB,
         )
         filename = kwargs.get("filename")
         if not filename:
@@ -3608,8 +3613,12 @@ class DocumentHandler(MediaSendHandler):
         if not os.path.isfile(file_path):
             raise ValueError(f"File not found: {file_path}")
         logger.info("[%s] DocumentHandler: reading %s", adapter.name, file_path)
-        with open(file_path, "rb") as f:
-            file_bytes = f.read()
+
+        def _read_document():
+            with open(file_path, "rb") as f:
+                return f.read()
+
+        file_bytes = await asyncio.to_thread(_read_document)
         filename = kwargs.get("filename") or os.path.basename(file_path) or "document"
         content_type = guess_mime_type(filename) or "application/octet-stream"
         return file_bytes, filename, content_type
@@ -3640,6 +3649,7 @@ class StickerHandler(MediaSendHandler):
             build_face_msg_body,
             build_sticker_msg_body,
         )
+
         sticker_name = kwargs.get("sticker_name")
         face_index = kwargs.get("face_index")
 
@@ -3653,6 +3663,7 @@ class StickerHandler(MediaSendHandler):
         else:
             sticker = get_random_sticker()
             return build_sticker_msg_body(sticker)
+
 
 class GroupQueryService:
     """Encapsulates all group query operations (both low-level WS calls and
@@ -3682,21 +3693,28 @@ class GroupQueryService:
             return None
         encoded = encode_query_group_info(group_code)
         from gateway.platforms.yuanbao_proto import decode_conn_msg as _decode
+
         decoded = _decode(encoded)
         req_id = decoded["head"]["msg_id"]
         try:
-            response = await adapter._connection.send_biz_request(encoded, req_id=req_id)
+            response = await adapter._connection.send_biz_request(
+                encoded, req_id=req_id
+            )
             head = response.get("head", {})
             status = head.get("status", 0)
             if status != 0:
-                logger.warning("[%s] query_group_info failed: status=%d", adapter.name, status)
+                logger.warning(
+                    "[%s] query_group_info failed: status=%d", adapter.name, status
+                )
                 return None
             biz_data = response.get("data", b"") or response.get("body", b"")
             if biz_data and isinstance(biz_data, bytes):
                 return decode_query_group_info_rsp(biz_data)
             return {"group_code": group_code}
         except asyncio.TimeoutError:
-            logger.warning("[%s] query_group_info timeout: group=%s", adapter.name, group_code)
+            logger.warning(
+                "[%s] query_group_info timeout: group=%s", adapter.name, group_code
+            )
             return None
         except Exception as exc:
             logger.warning("[%s] query_group_info failed: %s", adapter.name, exc)
@@ -3715,14 +3733,19 @@ class GroupQueryService:
             return None
         encoded = encode_get_group_member_list(group_code, offset=offset, limit=limit)
         from gateway.platforms.yuanbao_proto import decode_conn_msg as _decode
+
         decoded = _decode(encoded)
         req_id = decoded["head"]["msg_id"]
         try:
-            response = await adapter._connection.send_biz_request(encoded, req_id=req_id)
+            response = await adapter._connection.send_biz_request(
+                encoded, req_id=req_id
+            )
             head = response.get("head", {})
             status = head.get("status", 0)
             if status != 0:
-                logger.warning("[%s] get_group_member_list failed: status=%d", adapter.name, status)
+                logger.warning(
+                    "[%s] get_group_member_list failed: status=%d", adapter.name, status
+                )
                 return None
             biz_data = response.get("data", b"") or response.get("body", b"")
             if biz_data and isinstance(biz_data, bytes):
@@ -3733,7 +3756,9 @@ class GroupQueryService:
                 adapter._member_cache[group_code] = (time.time(), result["members"])
             return result
         except asyncio.TimeoutError:
-            logger.warning("[%s] get_group_member_list timeout: group=%s", adapter.name, group_code)
+            logger.warning(
+                "[%s] get_group_member_list timeout: group=%s", adapter.name, group_code
+            )
             return None
         except Exception as exc:
             logger.warning("[%s] get_group_member_list failed: %s", adapter.name, exc)
@@ -3751,7 +3776,7 @@ class GroupQueryService:
         """
         if not chat_id.startswith("group:"):
             return {"error": "This command is only available in group chats"}
-        group_code = chat_id[len("group:"):]
+        group_code = chat_id[len("group:") :]
         result = await self.query_group_info_raw(group_code)
         if result is None:
             return {"error": "Failed to query group info"}
@@ -3775,7 +3800,7 @@ class GroupQueryService:
         """
         if not chat_id.startswith("group:"):
             return {"error": "This command is only available in group chats"}
-        group_code = chat_id[len("group:"):]
+        group_code = chat_id[len("group:") :]
         result = await self.get_group_member_list_raw(group_code)
         if result is None:
             return {"error": "Failed to query group members"}
@@ -3785,18 +3810,24 @@ class GroupQueryService:
         if action == "find" and name:
             query = name.lower()
             members = [
-                m for m in members
+                m
+                for m in members
                 if query in (m.get("nickname", "") or "").lower()
                 or query in (m.get("name_card", "") or "").lower()
                 or query in (m.get("user_id", "") or "").lower()
             ]
         elif action == "list_bots":
-            members = [m for m in members if "bot" in (m.get("nickname", "") or "").lower()]
+            members = [
+                m for m in members if "bot" in (m.get("nickname", "") or "").lower()
+            ]
 
         # Construct mentionHint
         mention_hint = ""
         if members and len(members) <= 10:
-            names = [m.get("name_card") or m.get("nickname") or m.get("user_id", "") for m in members]
+            names = [
+                m.get("name_card") or m.get("nickname") or m.get("user_id", "")
+                for m in members
+            ]
             mention_hint = "Mention with @name: " + ", ".join(names)
 
         return {
@@ -3828,7 +3859,7 @@ class HeartbeatManager:
             return
         try:
             if chat_id.startswith("group:"):
-                group_code = chat_id[len("group:"):]
+                group_code = chat_id[len("group:") :]
                 encoded = encode_send_group_heartbeat(
                     from_account=adapter._bot_id,
                     group_code=group_code,
@@ -3842,10 +3873,14 @@ class HeartbeatManager:
                     heartbeat=heartbeat_val,
                 )
             await conn.ws.send(encoded)
-            status_name = "RUNNING" if heartbeat_val == WS_HEARTBEAT_RUNNING else "FINISH"
+            status_name = (
+                "RUNNING" if heartbeat_val == WS_HEARTBEAT_RUNNING else "FINISH"
+            )
             logger.debug(
                 "[%s] Reply heartbeat %s sent: chat=%s",
-                adapter.name, status_name, chat_id,
+                adapter.name,
+                status_name,
+                chat_id,
             )
         except Exception as exc:
             logger.debug("[%s] send_heartbeat_once failed: %s", adapter.name, exc)
@@ -3956,13 +3991,17 @@ class SlowResponseNotifier:
             await asyncio.sleep(SLOW_RESPONSE_TIMEOUT_S)
             logger.info(
                 "[%s] Agent response exceeded %ds for %s, sending wait notice",
-                self._adapter.name, int(SLOW_RESPONSE_TIMEOUT_S), chat_id,
+                self._adapter.name,
+                int(SLOW_RESPONSE_TIMEOUT_S),
+                chat_id,
             )
             await self._sender.send_text_chunk(chat_id, SLOW_RESPONSE_MESSAGE)
         except asyncio.CancelledError:
             pass
         except Exception as exc:
-            logger.debug("[%s] Slow-response notifier failed: %s", self._adapter.name, exc)
+            logger.debug(
+                "[%s] Slow-response notifier failed: %s", self._adapter.name, exc
+            )
 
     def cancel(self, chat_id: str) -> None:
         """Cancel the pending slow-response notifier for *chat_id*, if any."""
@@ -3989,16 +4028,29 @@ class MessageSender:
       - Direct send helper (text + media, used by send_message tool)
     """
 
-    IMAGE_EXTS: ClassVar[frozenset] = frozenset({".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"})
+    IMAGE_EXTS: ClassVar[frozenset] = frozenset({
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".webp",
+        ".bmp",
+    })
     CHAT_DICT_MAX_SIZE: ClassVar[int] = 1000  # Max distinct chat IDs in _chat_locks
 
     def __init__(self, adapter: "YuanbaoAdapter") -> None:
         self._adapter = adapter
-        self._chat_locks: collections.OrderedDict[str, asyncio.Lock] = collections.OrderedDict()
+        self._chat_locks: collections.OrderedDict[str, asyncio.Lock] = (
+            collections.OrderedDict()
+        )
 
         # Optional hooks injected by OutboundManager for coordination
-        self._on_send_start: Optional[Callable[[str], Any]] = None   # cancel slow-notifier
-        self._on_send_finish: Optional[Callable[[str], Any]] = None  # send FINISH heartbeat
+        self._on_send_start: Optional[Callable[[str], Any]] = (
+            None  # cancel slow-notifier
+        )
+        self._on_send_finish: Optional[Callable[[str], Any]] = (
+            None  # send FINISH heartbeat
+        )
 
         # Media send handlers (strategy pattern)
         self._media_handlers: Dict[str, MediaSendHandler] = {
@@ -4058,12 +4110,17 @@ class MessageSender:
             chunks = self.truncate_message(content_to_send, adapter.MAX_TEXT_CHUNK)
             logger.info(
                 "[%s] truncate_message: input=%d chars, max=%d, output=%d chunk(s) sizes=%s",
-                adapter.name, len(content_to_send), adapter.MAX_TEXT_CHUNK,
-                len(chunks), [len(c) for c in chunks],
+                adapter.name,
+                len(content_to_send),
+                adapter.MAX_TEXT_CHUNK,
+                len(chunks),
+                [len(c) for c in chunks],
             )
             for i, chunk in enumerate(chunks):
                 r_to = reply_to if i == 0 else None
-                result = await self.send_text_chunk(chat_id, chunk, r_to, group_code=group_code)
+                result = await self.send_text_chunk(
+                    chat_id, chunk, r_to, group_code=group_code
+                )
                 if not result.success:
                     return result
 
@@ -4091,8 +4148,11 @@ class MessageSender:
                 error=f"Unknown media handler: {handler_name!r}",
             )
         return await handler.handle(
-            self._adapter, chat_id,
-            reply_to=reply_to, caption=caption, **kwargs,
+            self._adapter,
+            chat_id,
+            reply_to=reply_to,
+            caption=caption,
+            **kwargs,
         )
 
     # -- Direct send (text + media, used by send_message tool) -------------
@@ -4151,11 +4211,13 @@ class MessageSender:
         lock = self.get_chat_lock(chat_id)
         async with lock:
             if chat_id.startswith("group:"):
-                grp = chat_id[len("group:"):]
+                grp = chat_id[len("group:") :]
                 result = await self.send_group_msg_body(grp, msg_body, reply_to)
             else:
                 to_account = chat_id.removeprefix("direct:")
-                result = await self.send_c2c_msg_body(to_account, msg_body, group_code=group_code)
+                result = await self.send_c2c_msg_body(
+                    to_account, msg_body, group_code=group_code
+                )
 
         if result.get("success"):
             return SendResult(success=True, message_id=result.get("msg_key"))
@@ -4175,11 +4237,13 @@ class MessageSender:
         for attempt in range(retry):
             try:
                 if chat_id.startswith("group:"):
-                    grp = chat_id[len("group:"):]
+                    grp = chat_id[len("group:") :]
                     raw = await self.send_group_message(grp, text, reply_to)
                 else:
                     to_account = chat_id.removeprefix("direct:")
-                    raw = await self.send_c2c_message(to_account, text, group_code=group_code)
+                    raw = await self.send_c2c_message(
+                        to_account, text, group_code=group_code
+                    )
 
                 if raw.get("success"):
                     return SendResult(success=True, message_id=raw.get("msg_key"))
@@ -4187,27 +4251,37 @@ class MessageSender:
                 last_error = raw.get("error", "Unknown error")
                 logger.warning(
                     "[%s] send_text_chunk attempt %d/%d failed: %s",
-                    adapter.name, attempt + 1, retry, last_error,
+                    adapter.name,
+                    attempt + 1,
+                    retry,
+                    last_error,
                 )
             except Exception as exc:
                 last_error = str(exc)
                 logger.warning(
                     "[%s] send_text_chunk attempt %d/%d exception: %s",
-                    adapter.name, attempt + 1, retry, last_error,
+                    adapter.name,
+                    attempt + 1,
+                    retry,
+                    last_error,
                 )
 
             if attempt < retry - 1:
-                await asyncio.sleep(2 ** attempt)
+                await asyncio.sleep(2**attempt)
 
         logger.error(
             "[%s] send_text_chunk max retries (%d) exceeded. Last error: %s",
-            adapter.name, retry, last_error,
+            adapter.name,
+            retry,
+            last_error,
         )
         return SendResult(success=False, error=f"Max retries exceeded: {last_error}")
 
     # -- C2C / Group message -----------------------------------------------
 
-    async def send_c2c_message(self, to_account: str, text: str, group_code: str = "") -> dict:
+    async def send_c2c_message(
+        self, to_account: str, text: str, group_code: str = ""
+    ) -> dict:
         """Send C2C text message, return {success: bool, msg_key: str}."""
         msg_body = [{"msg_type": "TIMTextElem", "msg_content": {"text": text}}]
         return await self.send_c2c_msg_body(to_account, msg_body, group_code=group_code)
@@ -4223,14 +4297,18 @@ class MessageSender:
         return await self.send_group_msg_body(group_code, msg_body, reply_to)
 
     # @mention pattern: (whitespace or start) + @ + nickname + (whitespace or end)
-    _AT_USER_RE = re.compile(r'(?:(?<=\s)|(?<=^))@(\S+?)(?=\s|$)', re.MULTILINE)
+    _AT_USER_RE = re.compile(r"(?:(?<=\s)|(?<=^))@(\S+?)(?=\s|$)", re.MULTILINE)
 
     def _build_msg_body_with_mentions(self, text: str, group_code: str) -> list:
         """Parse @nickname patterns and build mixed TIMTextElem + TIMCustomElem msg_body."""
         cached = self._adapter._member_cache.get(group_code)
         if cached:
             ts, member_list = cached
-            members = member_list if (time.time() - ts < self._adapter.MEMBER_CACHE_TTL_S) else []
+            members = (
+                member_list
+                if (time.time() - ts < self._adapter.MEMBER_CACHE_TTL_S)
+                else []
+            )
         else:
             members = []
         if not members:
@@ -4250,7 +4328,10 @@ class MessageSender:
             if start > last_idx:
                 seg = text[last_idx:start].strip()
                 if seg:
-                    msg_body.append({"msg_type": "TIMTextElem", "msg_content": {"text": seg}})
+                    msg_body.append({
+                        "msg_type": "TIMTextElem",
+                        "msg_content": {"text": seg},
+                    })
 
             nickname = match.group(1)
             entry = nickname_to_uid.get(nickname.lower())
@@ -4259,25 +4340,37 @@ class MessageSender:
                 msg_body.append({
                     "msg_type": "TIMCustomElem",
                     "msg_content": {
-                        "data": json.dumps({"elem_type": 1002, "text": f"@{real_nick}", "user_id": uid}),
+                        "data": json.dumps({
+                            "elem_type": 1002,
+                            "text": f"@{real_nick}",
+                            "user_id": uid,
+                        }),
                     },
                 })
             else:
-                msg_body.append({"msg_type": "TIMTextElem", "msg_content": {"text": f"@{nickname}"}})
+                msg_body.append({
+                    "msg_type": "TIMTextElem",
+                    "msg_content": {"text": f"@{nickname}"},
+                })
 
             last_idx = match.end()
 
         if last_idx < len(text):
             tail = text[last_idx:].strip()
             if tail:
-                msg_body.append({"msg_type": "TIMTextElem", "msg_content": {"text": tail}})
+                msg_body.append({
+                    "msg_type": "TIMTextElem",
+                    "msg_content": {"text": tail},
+                })
 
         if not msg_body:
             msg_body.append({"msg_type": "TIMTextElem", "msg_content": {"text": text}})
 
         return msg_body
 
-    async def send_c2c_msg_body(self, to_account: str, msg_body: list, group_code: str = "") -> dict:
+    async def send_c2c_msg_body(
+        self, to_account: str, msg_body: list, group_code: str = ""
+    ) -> dict:
         """Send C2C message with arbitrary MsgBody."""
         adapter = self._adapter
         req_id = f"c2c_{next_seq_no()}"
@@ -4312,14 +4405,21 @@ class MessageSender:
 
     @staticmethod
     async def _dispatch_encoded(
-        adapter: "YuanbaoAdapter", encoded: bytes, req_id: str,
+        adapter: "YuanbaoAdapter",
+        encoded: bytes,
+        req_id: str,
     ) -> dict:
         """Send pre-encoded bytes via WS and return a normalised result dict."""
         try:
-            response = await adapter._connection.send_biz_request(encoded, req_id=req_id)
+            response = await adapter._connection.send_biz_request(
+                encoded, req_id=req_id
+            )
             return {"success": True, "msg_key": response.get("msg_id", "")}
         except asyncio.TimeoutError:
-            return {"success": False, "error": f"Request timeout after {DEFAULT_SEND_TIMEOUT}s"}
+            return {
+                "success": False,
+                "error": f"Request timeout after {DEFAULT_SEND_TIMEOUT}s",
+            }
         except Exception as exc:
             return {"success": False, "error": str(exc)}
 
@@ -4365,11 +4465,13 @@ class MessageSender:
 
         # Delegate to MarkdownProcessor for table/fence-aware chunking
         chunks = MarkdownProcessor.chunk_markdown_text(
-            content, max_length, len_fn=len_fn,
+            content,
+            max_length,
+            len_fn=len_fn,
         )
 
         # Strip page indicators like (1/3) that BasePlatformAdapter may add
-        chunks = [_INDICATOR_RE.sub('', c) for c in chunks]
+        chunks = [_INDICATOR_RE.sub("", c) for c in chunks]
 
         return chunks if chunks else [content]
 
@@ -4422,7 +4524,9 @@ class OutboundManager:
         self._adapter = adapter
         self.sender: MessageSender = MessageSender(adapter)
         self.heartbeat: HeartbeatManager = HeartbeatManager(adapter)
-        self.slow_notifier: SlowResponseNotifier = SlowResponseNotifier(adapter, self.sender)
+        self.slow_notifier: SlowResponseNotifier = SlowResponseNotifier(
+            adapter, self.sender
+        )
 
         # Wire coordination hooks into MessageSender
         self.sender._on_send_start = self._handle_send_start
@@ -4441,20 +4545,30 @@ class OutboundManager:
     # -- Delegated public API (used by YuanbaoAdapter) ---------------------
 
     async def send_text(
-        self, chat_id: str, content: str, reply_to: Optional[str] = None,
+        self,
+        chat_id: str,
+        content: str,
+        reply_to: Optional[str] = None,
         group_code: str = "",
     ) -> "SendResult":
         """Send text message with auto-chunking."""
-        return await self.sender.send_text(chat_id, content, reply_to, group_code=group_code)
+        return await self.sender.send_text(
+            chat_id, content, reply_to, group_code=group_code
+        )
 
     async def send_media(
-        self, chat_id: str, handler_name: str, **kwargs: Any,
+        self,
+        chat_id: str,
+        handler_name: str,
+        **kwargs: Any,
     ) -> "SendResult":
         """Dispatch media send to the named handler strategy."""
         return await self.sender.send_media(chat_id, handler_name, **kwargs)
 
     async def send_direct(
-        self, chat_id: str, message: str,
+        self,
+        chat_id: str,
+        message: str,
         media_files: Optional[List[Tuple[str, bool]]] = None,
     ) -> Dict[str, Any]:
         """Send text + media (used by send_message tool)."""
@@ -4487,7 +4601,9 @@ class OutboundManager:
 
     @staticmethod
     def validate_media(
-        file_bytes: Optional[bytes], filename: str, max_size_mb: int = 20,
+        file_bytes: Optional[bytes],
+        filename: str,
+        max_size_mb: int = 20,
     ) -> Optional[str]:
         """Proxy to MessageSender.validate_media."""
         return MessageSender.validate_media(file_bytes, filename, max_size_mb)
@@ -4530,7 +4646,9 @@ class YuanbaoAdapter(BasePlatformAdapter):
         self._app_secret: str = (_extra.get("app_secret") or "").strip()
         self._bot_id: Optional[str] = _extra.get("bot_id") or None
         self._ws_url: str = (_extra.get("ws_url") or DEFAULT_WS_GATEWAY_URL).strip()
-        self._api_domain: str = (_extra.get("api_domain") or DEFAULT_API_DOMAIN).rstrip("/")
+        self._api_domain: str = (_extra.get("api_domain") or DEFAULT_API_DOMAIN).rstrip(
+            "/"
+        )
         self._route_env: str = (_extra.get("route_env") or "").strip()
 
         # Core managers (UML composition)
@@ -4569,26 +4687,30 @@ class YuanbaoAdapter(BasePlatformAdapter):
         # Access control policy (DM / Group)
         # ------------------------------------------------------------------
         dm_policy: str = (
-            _extra.get("dm_policy")
-            or os.getenv("YUANBAO_DM_POLICY", "open")
-        ).strip().lower()
-
-        _dm_allow_from_raw: str = (
-            _extra.get("dm_allow_from")
-            or os.getenv("YUANBAO_DM_ALLOW_FROM", "")
+            (_extra.get("dm_policy") or os.getenv("YUANBAO_DM_POLICY", "open"))
+            .strip()
+            .lower()
         )
-        dm_allow_from: list[str] = [x.strip() for x in _dm_allow_from_raw.split(",") if x.strip()]
+
+        _dm_allow_from_raw: str = _extra.get("dm_allow_from") or os.getenv(
+            "YUANBAO_DM_ALLOW_FROM", ""
+        )
+        dm_allow_from: list[str] = [
+            x.strip() for x in _dm_allow_from_raw.split(",") if x.strip()
+        ]
 
         group_policy: str = (
-            _extra.get("group_policy")
-            or os.getenv("YUANBAO_GROUP_POLICY", "open")
-        ).strip().lower()
-
-        _group_allow_from_raw: str = (
-            _extra.get("group_allow_from")
-            or os.getenv("YUANBAO_GROUP_ALLOW_FROM", "")
+            (_extra.get("group_policy") or os.getenv("YUANBAO_GROUP_POLICY", "open"))
+            .strip()
+            .lower()
         )
-        group_allow_from: list[str] = [x.strip() for x in _group_allow_from_raw.split(",") if x.strip()]
+
+        _group_allow_from_raw: str = _extra.get("group_allow_from") or os.getenv(
+            "YUANBAO_GROUP_ALLOW_FROM", ""
+        )
+        group_allow_from: list[str] = [
+            x.strip() for x in _group_allow_from_raw.split(",") if x.strip()
+        ]
 
         self._access_policy = AccessPolicy(
             dm_policy=dm_policy,
@@ -4613,7 +4735,9 @@ class YuanbaoAdapter(BasePlatformAdapter):
         _existing_home = os.getenv("YUANBAO_HOME_CHANNEL") or (
             config.home_channel.chat_id if config.home_channel else ""
         )
-        self._auto_sethome_done: bool = bool(_existing_home) and not _existing_home.startswith("group:")
+        self._auto_sethome_done: bool = bool(
+            _existing_home
+        ) and not _existing_home.startswith("group:")
 
     # ------------------------------------------------------------------
     # Task tracking helper
@@ -4668,7 +4792,9 @@ class YuanbaoAdapter(BasePlatformAdapter):
         group_code: str = "",
     ) -> SendResult:
         """Send text message with auto-chunking. Delegates to OutboundManager."""
-        return await self._outbound.send_text(chat_id, content, reply_to, group_code=group_code)
+        return await self._outbound.send_text(
+            chat_id, content, reply_to, group_code=group_code
+        )
 
     async def get_chat_info(self, chat_id: str) -> Dict[str, Any]:
         """Return basic chat metadata derived from the chat_id prefix.
@@ -4722,7 +4848,9 @@ class YuanbaoAdapter(BasePlatformAdapter):
         self, group_code: str, offset: int = 0, limit: int = 200
     ) -> Optional[dict]:
         """Query group member list (delegates to GroupQueryService)."""
-        return await self._group_query.get_group_member_list_raw(group_code, offset=offset, limit=limit)
+        return await self._group_query.get_group_member_list_raw(
+            group_code, offset=offset, limit=limit
+        )
 
     # ------------------------------------------------------------------
     # DM active private chat + access control
@@ -4730,7 +4858,9 @@ class YuanbaoAdapter(BasePlatformAdapter):
 
     DM_MAX_CHARS = 10000  # DM text limit
 
-    async def send_dm(self, user_id: str, text: str, group_code: str = "") -> SendResult:
+    async def send_dm(
+        self, user_id: str, text: str, group_code: str = ""
+    ) -> SendResult:
         """
         Actively send C2C private chat message.
 
@@ -4745,7 +4875,7 @@ class YuanbaoAdapter(BasePlatformAdapter):
         if not self._access_policy.is_dm_allowed(user_id):
             return SendResult(success=False, error="DM access denied for this user")
         if len(text) > self.DM_MAX_CHARS:
-            text = text[:self.DM_MAX_CHARS] + "\n...(truncated)"
+            text = text[: self.DM_MAX_CHARS] + "\n...(truncated)"
         chat_id = f"direct:{user_id}"
         return await self.send(chat_id, text, group_code=group_code)
 
@@ -4764,8 +4894,11 @@ class YuanbaoAdapter(BasePlatformAdapter):
     ) -> SendResult:
         """Send image message (URL). Delegates to OutboundManager via ImageUrlHandler."""
         return await self._outbound.send_media(
-            chat_id, "image_url",
-            reply_to=reply_to, caption=caption, image_url=image_url,
+            chat_id,
+            "image_url",
+            reply_to=reply_to,
+            caption=caption,
+            image_url=image_url,
             **kwargs,
         )
 
@@ -4780,8 +4913,11 @@ class YuanbaoAdapter(BasePlatformAdapter):
     ) -> SendResult:
         """Send local image file. Delegates to OutboundManager via ImageFileHandler."""
         return await self._outbound.send_media(
-            chat_id, "image_file",
-            reply_to=reply_to, caption=caption, image_path=image_path,
+            chat_id,
+            "image_file",
+            reply_to=reply_to,
+            caption=caption,
+            image_path=image_path,
             **kwargs,
         )
 
@@ -4796,8 +4932,11 @@ class YuanbaoAdapter(BasePlatformAdapter):
     ) -> SendResult:
         """Send file message (URL). Delegates to OutboundManager via FileUrlHandler."""
         return await self._outbound.send_media(
-            chat_id, "file_url",
-            reply_to=reply_to, file_url=file_url, filename=filename,
+            chat_id,
+            "file_url",
+            reply_to=reply_to,
+            file_url=file_url,
+            filename=filename,
             **kwargs,
         )
 
@@ -4811,9 +4950,11 @@ class YuanbaoAdapter(BasePlatformAdapter):
     ) -> SendResult:
         """Send sticker/emoji. Delegates to OutboundManager via StickerHandler."""
         return await self._outbound.send_media(
-            chat_id, "sticker",
+            chat_id,
+            "sticker",
             reply_to=reply_to,
-            sticker_name=sticker_name, face_index=face_index,
+            sticker_name=sticker_name,
+            face_index=face_index,
             **kwargs,
         )
 
@@ -4829,16 +4970,21 @@ class YuanbaoAdapter(BasePlatformAdapter):
     ) -> SendResult:
         """Send local file (document). Delegates to OutboundManager via DocumentHandler."""
         return await self._outbound.send_media(
-            chat_id, "document",
-            reply_to=reply_to, caption=caption,
-            file_path=file_path, filename=filename,
+            chat_id,
+            "document",
+            reply_to=reply_to,
+            caption=caption,
+            file_path=file_path,
+            filename=filename,
             **kwargs,
         )
 
     async def _get_cached_token(self) -> dict:
         """Get the current valid sign token (using module-level cache)."""
         return await SignManager.get_token(
-            self._app_key, self._app_secret, self._api_domain,
+            self._app_key,
+            self._app_secret,
+            self._api_domain,
             route_env=self._route_env,
         )
 
