@@ -1,6 +1,6 @@
 import re
 
-with open("tests/agent/test_auxiliary_client.py", "r") as f:
+with open("tests/agent/test_auxiliary_client.py", "r", encoding="utf-8") as f:
     text = f.read()
 
 replacement = """    def test_ttl_expiry_evicts(self):
@@ -21,5 +21,5 @@ text = re.sub(
     count=1
 )
 
-with open("tests/agent/test_auxiliary_client.py", "w") as f:
+with open("tests/agent/test_auxiliary_client.py", "w", encoding="utf-8") as f:
     f.write(text)
