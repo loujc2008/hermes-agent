@@ -90,7 +90,7 @@ def chrome_cdp(request):
             time.sleep(0.25)
     if ws_url is None:
         proc.terminate()
-        proc.wait(timeout=5)
+        proc.wait(timeout=10)
         shutil.rmtree(profile, ignore_errors=True)
         pytest.skip("Chrome didn't expose CDP in time")
 
