@@ -983,6 +983,20 @@ class TestSessionConfiguration:
             "hermes_cli.models.detect_provider_for_model",
             lambda model, current: None,
         )
+        try:
+            monkeypatch.setattr(
+                "hermes_cli.runtime_provider.get_compatible_custom_providers",
+                lambda config: [],
+            )
+        except AttributeError:
+            pass
+        try:
+            monkeypatch.setattr(
+                "hermes_cli.runtime_provider.get_custom_providers",
+                lambda: {},
+            )
+        except AttributeError:
+            pass
         manager = SessionManager(db=SessionDB(tmp_path / "state.db"))
 
         with patch("run_agent.AIAgent", side_effect=fake_agent):
@@ -1569,6 +1583,20 @@ class TestSlashCommands:
             "hermes_cli.models.detect_provider_for_model",
             lambda model, current: None,
         )
+        try:
+            monkeypatch.setattr(
+                "hermes_cli.runtime_provider.get_compatible_custom_providers",
+                lambda config: [],
+            )
+        except AttributeError:
+            pass
+        try:
+            monkeypatch.setattr(
+                "hermes_cli.runtime_provider.get_custom_providers",
+                lambda: {},
+            )
+        except AttributeError:
+            pass
         manager = SessionManager(db=SessionDB(tmp_path / "state.db"))
 
         with patch("run_agent.AIAgent", side_effect=fake_agent):
