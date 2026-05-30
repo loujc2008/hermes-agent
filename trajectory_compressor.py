@@ -36,7 +36,6 @@ import time
 import yaml
 import logging
 import asyncio
-import aiofiles
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
@@ -1006,9 +1005,8 @@ Write only the summary, starting with "[CONTEXT SUMMARY]:" prefix."""
         all_entries = []  # List of (file_path, entry_idx, entry)
         
         for file_path in jsonl_files:
-            async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
-                line_num = 0
-                async for line in f:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line_num, line in enumerate(f):
                     line = line.strip()
                     if line:
                         try:
@@ -1016,7 +1014,6 @@ Write only the summary, starting with "[CONTEXT SUMMARY]:" prefix."""
                             all_entries.append((file_path, line_num, entry))
                         except json.JSONDecodeError as e:
                             self.logger.warning(f"Skipping invalid JSON at {file_path}:{line_num}: {e}")
-                    line_num += 1
         
         total_entries = len(all_entries)
         
