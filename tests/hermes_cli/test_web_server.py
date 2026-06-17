@@ -2322,7 +2322,7 @@ class TestPtyWebSocket:
             while time.monotonic() < deadline:
                 if ws_mod._event_channels.get("broadcast-test"):
                     break
-                time.sleep(0.05)
+                time.sleep(0.01)
             else:
                 raise AssertionError(
                     "subscriber did not register on channel within 5s"
@@ -2349,7 +2349,7 @@ class TestPtyWebSocket:
                 t = threading.Thread(target=_recv, daemon=True)
                 t.start()
                 try:
-                    received = recv_q.get(timeout=20.0)
+                    received = recv_q.get(timeout=10.0)
                 except queue.Empty:
                     raise AssertionError(
                         "broadcast not received within 10s — server likely "
