@@ -13,7 +13,6 @@ import threading
 from unittest.mock import MagicMock, patch
 
 
-
 def _make_runner():
     """Create a minimal GatewayRunner with just the cache infrastructure."""
     from gateway.run import GatewayRunner
@@ -30,19 +29,34 @@ class TestAgentConfigSignature:
     def test_same_config_same_signature(self):
         from gateway.run import GatewayRunner
 
-        runtime = {"api_key": "sk-test12345678", "base_url": "https://openrouter.ai/api/v1",
-                    "provider": "openrouter", "api_mode": "chat_completions"}
-        sig1 = GatewayRunner._agent_config_signature("claude-sonnet-4", runtime, ["hermes-telegram"], "")
-        sig2 = GatewayRunner._agent_config_signature("claude-sonnet-4", runtime, ["hermes-telegram"], "")
+        runtime = {
+            "api_key": "sk-test12345678",
+            "base_url": "https://openrouter.ai/api/v1",
+            "provider": "openrouter",
+            "api_mode": "chat_completions",
+        }
+        sig1 = GatewayRunner._agent_config_signature(
+            "claude-sonnet-4", runtime, ["hermes-telegram"], ""
+        )
+        sig2 = GatewayRunner._agent_config_signature(
+            "claude-sonnet-4", runtime, ["hermes-telegram"], ""
+        )
         assert sig1 == sig2
 
     def test_model_change_different_signature(self):
         from gateway.run import GatewayRunner
 
-        runtime = {"api_key": "sk-test12345678", "base_url": "https://openrouter.ai/api/v1",
-                    "provider": "openrouter"}
-        sig1 = GatewayRunner._agent_config_signature("claude-sonnet-4", runtime, ["hermes-telegram"], "")
-        sig2 = GatewayRunner._agent_config_signature("claude-opus-4.6", runtime, ["hermes-telegram"], "")
+        runtime = {
+            "api_key": "sk-test12345678",
+            "base_url": "https://openrouter.ai/api/v1",
+            "provider": "openrouter",
+        }
+        sig1 = GatewayRunner._agent_config_signature(
+            "claude-sonnet-4", runtime, ["hermes-telegram"], ""
+        )
+        sig2 = GatewayRunner._agent_config_signature(
+            "claude-opus-4.6", runtime, ["hermes-telegram"], ""
+        )
         assert sig1 != sig2
 
     def test_same_token_prefix_different_full_token_changes_signature(self):
@@ -63,36 +77,68 @@ class TestAgentConfigSignature:
         }
 
         assert rt1["api_key"][:8] == rt2["api_key"][:8]
-        sig1 = GatewayRunner._agent_config_signature("gpt-5.3-codex", rt1, ["hermes-telegram"], "")
-        sig2 = GatewayRunner._agent_config_signature("gpt-5.3-codex", rt2, ["hermes-telegram"], "")
+        sig1 = GatewayRunner._agent_config_signature(
+            "gpt-5.3-codex", rt1, ["hermes-telegram"], ""
+        )
+        sig2 = GatewayRunner._agent_config_signature(
+            "gpt-5.3-codex", rt2, ["hermes-telegram"], ""
+        )
         assert sig1 != sig2
 
     def test_provider_change_different_signature(self):
         from gateway.run import GatewayRunner
 
-        rt1 = {"api_key": "sk-test12345678", "base_url": "https://openrouter.ai/api/v1", "provider": "openrouter"}
-        rt2 = {"api_key": "sk-test12345678", "base_url": "https://api.anthropic.com", "provider": "anthropic"}
-        sig1 = GatewayRunner._agent_config_signature("claude-sonnet-4", rt1, ["hermes-telegram"], "")
-        sig2 = GatewayRunner._agent_config_signature("claude-sonnet-4", rt2, ["hermes-telegram"], "")
+        rt1 = {
+            "api_key": "sk-test12345678",
+            "base_url": "https://openrouter.ai/api/v1",
+            "provider": "openrouter",
+        }
+        rt2 = {
+            "api_key": "sk-test12345678",
+            "base_url": "https://api.anthropic.com",
+            "provider": "anthropic",
+        }
+        sig1 = GatewayRunner._agent_config_signature(
+            "claude-sonnet-4", rt1, ["hermes-telegram"], ""
+        )
+        sig2 = GatewayRunner._agent_config_signature(
+            "claude-sonnet-4", rt2, ["hermes-telegram"], ""
+        )
         assert sig1 != sig2
 
     def test_toolset_change_different_signature(self):
         from gateway.run import GatewayRunner
 
-        runtime = {"api_key": "sk-test12345678", "base_url": "https://openrouter.ai/api/v1", "provider": "openrouter"}
-        sig1 = GatewayRunner._agent_config_signature("claude-sonnet-4", runtime, ["hermes-telegram"], "")
-        sig2 = GatewayRunner._agent_config_signature("claude-sonnet-4", runtime, ["hermes-discord"], "")
+        runtime = {
+            "api_key": "sk-test12345678",
+            "base_url": "https://openrouter.ai/api/v1",
+            "provider": "openrouter",
+        }
+        sig1 = GatewayRunner._agent_config_signature(
+            "claude-sonnet-4", runtime, ["hermes-telegram"], ""
+        )
+        sig2 = GatewayRunner._agent_config_signature(
+            "claude-sonnet-4", runtime, ["hermes-discord"], ""
+        )
         assert sig1 != sig2
 
     def test_reasoning_not_in_signature(self):
         """Reasoning config is set per-message, not part of the signature."""
         from gateway.run import GatewayRunner
 
-        runtime = {"api_key": "sk-test12345678", "base_url": "https://openrouter.ai/api/v1", "provider": "openrouter"}
+        runtime = {
+            "api_key": "sk-test12345678",
+            "base_url": "https://openrouter.ai/api/v1",
+            "provider": "openrouter",
+        }
         # Same config — signature should be identical regardless of what
         # reasoning_config the caller might have (it's not passed in)
-        sig1 = GatewayRunner._agent_config_signature("claude-sonnet-4", runtime, ["hermes-telegram"], "")
-        sig2 = GatewayRunner._agent_config_signature("claude-sonnet-4", runtime, ["hermes-telegram"], "")
+        sig1 = GatewayRunner._agent_config_signature(
+            "claude-sonnet-4", runtime, ["hermes-telegram"], ""
+        )
+        sig2 = GatewayRunner._agent_config_signature(
+            "claude-sonnet-4", runtime, ["hermes-telegram"], ""
+        )
         assert sig1 == sig2
 
     # ---------------------------------------------------------------
@@ -105,8 +151,12 @@ class TestAgentConfigSignature:
 
         runtime = {"api_key": "k", "base_url": "u", "provider": "p"}
         sig_omitted = GatewayRunner._agent_config_signature("m", runtime, [], "")
-        sig_empty = GatewayRunner._agent_config_signature("m", runtime, [], "", cache_keys={})
-        sig_none = GatewayRunner._agent_config_signature("m", runtime, [], "", cache_keys=None)
+        sig_empty = GatewayRunner._agent_config_signature(
+            "m", runtime, [], "", cache_keys={}
+        )
+        sig_none = GatewayRunner._agent_config_signature(
+            "m", runtime, [], "", cache_keys=None
+        )
         assert sig_omitted == sig_empty == sig_none
 
     def test_context_length_change_busts_cache(self):
@@ -115,11 +165,17 @@ class TestAgentConfigSignature:
 
         runtime = {"api_key": "k", "base_url": "u", "provider": "p"}
         sig1 = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys={"model.context_length": 200_000},
         )
         sig2 = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys={"model.context_length": 400_000},
         )
         assert sig1 != sig2
@@ -130,11 +186,17 @@ class TestAgentConfigSignature:
 
         runtime = {"api_key": "k", "base_url": "u", "provider": "p"}
         sig1 = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys={"model.max_tokens": 4096},
         )
         sig2 = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys={"model.max_tokens": 8192},
         )
         assert sig1 != sig2
@@ -144,11 +206,17 @@ class TestAgentConfigSignature:
 
         runtime = {"api_key": "k", "base_url": "u", "provider": "p"}
         sig1 = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys={"compression.threshold": 0.50},
         )
         sig2 = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys={"compression.threshold": 0.75},
         )
         assert sig1 != sig2
@@ -158,11 +226,17 @@ class TestAgentConfigSignature:
 
         runtime = {"api_key": "k", "base_url": "u", "provider": "p"}
         sig_on = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys={"compression.enabled": True},
         )
         sig_off = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys={"compression.enabled": False},
         )
         assert sig_on != sig_off
@@ -173,11 +247,17 @@ class TestAgentConfigSignature:
 
         runtime = {"api_key": "k", "base_url": "u", "provider": "p"}
         sig_a = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys={"model.context_length": 200_000, "compression.threshold": 0.5},
         )
         sig_b = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys={"compression.threshold": 0.5, "model.context_length": 200_000},
         )
         assert sig_a == sig_b
@@ -188,11 +268,17 @@ class TestAgentConfigSignature:
 
         runtime = {"api_key": "k", "base_url": "u", "provider": "p"}
         sig_before = GatewayRunner._agent_config_signature(
-            "m", runtime, ["telegram"], "",
+            "m",
+            runtime,
+            ["telegram"],
+            "",
             cache_keys={"tools.registry_generation": 10},
         )
         sig_after = GatewayRunner._agent_config_signature(
-            "m", runtime, ["telegram"], "",
+            "m",
+            runtime,
+            ["telegram"],
+            "",
             cache_keys={"tools.registry_generation": 11},
         )
 
@@ -206,32 +292,28 @@ class TestExtractCacheBustingConfig:
     def test_reads_model_context_length(self):
         from gateway.run import GatewayRunner
 
-        out = GatewayRunner._extract_cache_busting_config(
-            {
-                "model": {
-                    "context_length": 272_000,
-                    "max_tokens": 4096,
-                    "provider": "openrouter",
-                }
+        out = GatewayRunner._extract_cache_busting_config({
+            "model": {
+                "context_length": 272_000,
+                "max_tokens": 4096,
+                "provider": "openrouter",
             }
-        )
+        })
         assert out["model.context_length"] == 272_000
         assert out["model.max_tokens"] == 4096
 
     def test_reads_compression_subkeys(self):
         from gateway.run import GatewayRunner
 
-        out = GatewayRunner._extract_cache_busting_config(
-            {
-                "compression": {
-                    "enabled": False,
-                    "threshold": 0.6,
-                    "target_ratio": 0.3,
-                    "protect_last_n": 25,
-                    "some_other_key": "ignored",
-                }
+        out = GatewayRunner._extract_cache_busting_config({
+            "compression": {
+                "enabled": False,
+                "threshold": 0.6,
+                "target_ratio": 0.3,
+                "protect_last_n": 25,
+                "some_other_key": "ignored",
             }
-        )
+        })
         assert out["compression.enabled"] is False
         assert out["compression.threshold"] == 0.6
         assert out["compression.target_ratio"] == 0.3
@@ -251,9 +333,10 @@ class TestExtractCacheBustingConfig:
         from gateway.run import GatewayRunner
 
         # compression is a string — should not crash, all compression.* keys None
-        out = GatewayRunner._extract_cache_busting_config(
-            {"compression": "broken", "model": {"context_length": 100_000}}
-        )
+        out = GatewayRunner._extract_cache_busting_config({
+            "compression": "broken",
+            "model": {"context_length": 100_000},
+        })
         assert out["compression.enabled"] is None
         assert out["compression.threshold"] is None
         assert out["model.context_length"] == 100_000
@@ -276,7 +359,6 @@ class TestExtractCacheBustingConfig:
 
         assert out["tools.registry_generation"] == 12345
 
-
     def test_skips_honcho_config_read_when_provider_is_not_honcho(self, monkeypatch):
         """Non-Honcho gateways must not read/parse honcho.json on every message."""
         from gateway.run import GatewayRunner
@@ -288,9 +370,13 @@ class TestExtractCacheBustingConfig:
             called = True
             raise AssertionError("should not read Honcho config")
 
-        monkeypatch.setattr(GatewayRunner, "_extract_honcho_cache_busting_config", _boom)
+        monkeypatch.setattr(
+            GatewayRunner, "_extract_honcho_cache_busting_config", _boom
+        )
 
-        out = GatewayRunner._extract_cache_busting_config({"memory": {"provider": "mem0"}})
+        out = GatewayRunner._extract_cache_busting_config({
+            "memory": {"provider": "mem0"}
+        })
 
         assert called is False
         assert out["honcho.peer_name"] is None
@@ -311,9 +397,13 @@ class TestExtractCacheBustingConfig:
                 "honcho.user_peer_aliases": [("123", "eri")],
             }
 
-        monkeypatch.setattr(GatewayRunner, "_extract_honcho_cache_busting_config", _fake)
+        monkeypatch.setattr(
+            GatewayRunner, "_extract_honcho_cache_busting_config", _fake
+        )
 
-        out = GatewayRunner._extract_cache_busting_config({"memory": {"provider": "honcho"}})
+        out = GatewayRunner._extract_cache_busting_config({
+            "memory": {"provider": "honcho"}
+        })
 
         assert calls == [True]
         assert out["honcho.peer_name"] == "eri"
@@ -333,8 +423,12 @@ class TestExtractCacheBustingConfig:
             classmethod(lambda cls: cls._empty_honcho_cache_busting_config()),
         )
 
-        sig_honcho = GatewayRunner._extract_cache_busting_config({"memory": {"provider": "honcho"}})
-        sig_mem0 = GatewayRunner._extract_cache_busting_config({"memory": {"provider": "mem0"}})
+        sig_honcho = GatewayRunner._extract_cache_busting_config({
+            "memory": {"provider": "honcho"}
+        })
+        sig_mem0 = GatewayRunner._extract_cache_busting_config({
+            "memory": {"provider": "mem0"}
+        })
 
         assert sig_honcho["memory.provider"] == "honcho"
         assert sig_mem0["memory.provider"] == "mem0"
@@ -365,7 +459,9 @@ class TestExtractCacheBustingConfig:
             HonchoClientConfig=FakeConfig,
             resolve_config_path=lambda: config_path,
         )
-        monkeypatch.setitem(__import__("sys").modules, "plugins.memory.honcho.client", fake_client)
+        monkeypatch.setitem(
+            __import__("sys").modules, "plugins.memory.honcho.client", fake_client
+        )
         monkeypatch.setattr(GatewayRunner, "_HONCHO_CACHE_BUSTING_MEMO", {})
 
         first = GatewayRunner._extract_honcho_cache_busting_config()
@@ -375,7 +471,14 @@ class TestExtractCacheBustingConfig:
         assert first["honcho.user_peer_aliases"] == [("123", "eri")]
         assert parse_calls == [config_path]
 
-        config_path.write_text("{\n  \"changed\": true\n}")
+        import time
+
+        time.sleep(0.01)  # ensure mtime change
+        config_path.write_text('{\n  "changed": true\n}')
+        import os
+
+        os.utime(config_path, None)
+
         third = GatewayRunner._extract_honcho_cache_busting_config()
 
         assert third == first
@@ -393,15 +496,24 @@ class TestExtractCacheBustingConfig:
         }
         cfg_after = {
             "model": {"context_length": 200_000},
-            "compression": {"threshold": 0.75, "enabled": True},  # user raised threshold
+            "compression": {
+                "threshold": 0.75,
+                "enabled": True,
+            },  # user raised threshold
         }
 
         sig_before = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys=GatewayRunner._extract_cache_busting_config(cfg_before),
         )
         sig_after = GatewayRunner._agent_config_signature(
-            "m", runtime, [], "",
+            "m",
+            runtime,
+            [],
+            "",
             cache_keys=GatewayRunner._extract_cache_busting_config(cfg_after),
         )
         assert sig_before != sig_after, (
@@ -419,16 +531,27 @@ class TestAgentCacheLifecycle:
 
         runner = _make_runner()
         session_key = "telegram:12345"
-        runtime = {"api_key": "test", "base_url": "https://openrouter.ai/api/v1",
-                    "provider": "openrouter", "api_mode": "chat_completions"}
-        sig = runner._agent_config_signature("anthropic/claude-sonnet-4", runtime, ["hermes-telegram"], "")
+        runtime = {
+            "api_key": "test",
+            "base_url": "https://openrouter.ai/api/v1",
+            "provider": "openrouter",
+            "api_mode": "chat_completions",
+        }
+        sig = runner._agent_config_signature(
+            "anthropic/claude-sonnet-4", runtime, ["hermes-telegram"], ""
+        )
 
         # First message — create and cache
         agent1 = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True, skip_context_files=True,
-            skip_memory=True, platform="telegram",
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
+            platform="telegram",
         )
         with runner._agent_cache_lock:
             runner._agent_cache[session_key] = (agent1, sig)
@@ -446,21 +569,34 @@ class TestAgentCacheLifecycle:
 
         runner = _make_runner()
         session_key = "telegram:12345"
-        runtime = {"api_key": "test", "base_url": "https://openrouter.ai/api/v1",
-                    "provider": "openrouter", "api_mode": "chat_completions"}
+        runtime = {
+            "api_key": "test",
+            "base_url": "https://openrouter.ai/api/v1",
+            "provider": "openrouter",
+            "api_mode": "chat_completions",
+        }
 
-        old_sig = runner._agent_config_signature("anthropic/claude-sonnet-4", runtime, ["hermes-telegram"], "")
+        old_sig = runner._agent_config_signature(
+            "anthropic/claude-sonnet-4", runtime, ["hermes-telegram"], ""
+        )
         agent1 = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True, skip_context_files=True,
-            skip_memory=True, platform="telegram",
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
+            platform="telegram",
         )
         with runner._agent_cache_lock:
             runner._agent_cache[session_key] = (agent1, old_sig)
 
         # New model → different signature
-        new_sig = runner._agent_config_signature("anthropic/claude-opus-4.6", runtime, ["hermes-telegram"], "")
+        new_sig = runner._agent_config_signature(
+            "anthropic/claude-opus-4.6", runtime, ["hermes-telegram"], ""
+        )
         assert new_sig != old_sig
 
         with runner._agent_cache_lock:
@@ -475,9 +611,13 @@ class TestAgentCacheLifecycle:
         session_key = "telegram:12345"
 
         agent = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True, skip_context_files=True,
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
             skip_memory=True,
         )
         with runner._agent_cache_lock:
@@ -506,9 +646,13 @@ class TestAgentCacheLifecycle:
         from run_agent import AIAgent
 
         agent = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True, skip_context_files=True,
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
             skip_memory=True,
             reasoning_config={"enabled": True, "effort": "medium"},
         )
@@ -529,10 +673,15 @@ class TestAgentCacheLifecycle:
         from run_agent import AIAgent
 
         agent = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True, skip_context_files=True,
-            skip_memory=True, platform="telegram",
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
+            platform="telegram",
         )
 
         # Build system prompt (simulates first run_conversation)
@@ -548,9 +697,13 @@ class TestAgentCacheLifecycle:
         from run_agent import AIAgent
 
         agent = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True, skip_context_files=True,
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
             skip_memory=True,
         )
 
@@ -591,6 +744,7 @@ class TestAgentCacheBoundedGrowth:
             m._last_activity_ts = last_activity
         else:
             import time as _t
+
             m._last_activity_ts = _t.time()
         return m
 
@@ -650,9 +804,11 @@ class TestAgentCacheBoundedGrowth:
 
         release_calls: list = []
         cleanup_calls: list = []
+
         # Intercept both paths; only release_clients path should fire.
         def _soft(agent):
             release_calls.append(agent)
+
         runner._release_evicted_agent_soft = _soft
         runner._cleanup_agent_resources = lambda a: cleanup_calls.append(a)
 
@@ -665,6 +821,7 @@ class TestAgentCacheBoundedGrowth:
 
         # Cleanup is dispatched to a daemon thread; join briefly to observe.
         import time as _t
+
         deadline = _t.time() + 2.0
         while _t.time() < deadline and not release_calls:
             _t.sleep(0.02)
@@ -682,6 +839,7 @@ class TestAgentCacheBoundedGrowth:
         runner._cleanup_agent_resources = MagicMock()
 
         import time as _t
+
         fresh = self._fake_agent(last_activity=_t.time())
         stale = self._fake_agent(last_activity=_t.time() - 10.0)
         runner._agent_cache["fresh"] = (fresh, "s1")
@@ -767,6 +925,7 @@ class TestAgentCacheActiveSafety:
 
     def _fake_agent(self, idle_seconds: float = 0.0):
         import time as _t
+
         m = MagicMock()
         m._last_activity_ts = _t.time() - idle_seconds
         return m
@@ -941,8 +1100,10 @@ class TestAgentCacheActiveSafety:
         active = MagicMock()
         active._last_activity_ts = __import__("time").time()
         active.client = MagicMock()  # simulate an OpenAI client
+
         def _real_close():
             active.client = None  # mirrors run_agent.py:3299
+
         active.close = _real_close
         active.shutdown_memory_provider = MagicMock()
 
@@ -959,6 +1120,7 @@ class TestAgentCacheActiveSafety:
 
         # Let any eviction cleanup threads drain.
         import time as _t
+
         _t.sleep(0.2)
 
         # The ACTIVE agent's client must still be usable.
@@ -984,11 +1146,16 @@ class TestAgentCacheSpilloverLive:
     def _real_agent(self):
         """A genuine AIAgent; no API calls are made during these tests."""
         from run_agent import AIAgent
+
         return AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True,
-            skip_context_files=True, skip_memory=True,
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
             platform="telegram",
         )
 
@@ -1058,7 +1225,6 @@ class TestAgentCacheSpilloverLive:
             except Exception:
                 pass
 
-
     def test_evicted_session_next_turn_gets_fresh_agent(self, monkeypatch):
         """After eviction, the same session_key can insert a fresh agent.
 
@@ -1085,6 +1251,7 @@ class TestAgentCacheSpilloverLive:
 
         # Let the eviction cleanup thread run.
         import time as _t
+
         _t.sleep(0.3)
 
         # Now sA's user sends another message → a fresh agent goes in.
@@ -1133,15 +1300,20 @@ class TestAgentCacheIdleResume:
         from run_agent import AIAgent
 
         agent = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True,
-            skip_context_files=True, skip_memory=True,
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
             session_id="idle-resume-test-session",
         )
 
         # Spy on process_registry.kill_all — it MUST NOT be called.
         from tools import process_registry as _pr
+
         kill_all_calls: list = []
         original_kill_all = _pr.process_registry.kill_all
         _pr.process_registry.kill_all = lambda **kw: kill_all_calls.append(kw)
@@ -1166,10 +1338,14 @@ class TestAgentCacheIdleResume:
         from tools import browser_tool as _bt
 
         agent = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True,
-            skip_context_files=True, skip_memory=True,
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
             session_id="idle-resume-test-2",
         )
 
@@ -1203,10 +1379,14 @@ class TestAgentCacheIdleResume:
         from run_agent import AIAgent
 
         agent = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True,
-            skip_context_files=True, skip_memory=True,
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
         )
         # Clients are lazy-built; force one to exist so we can verify close.
         assert agent.client is not None  # __init__ builds it
@@ -1229,17 +1409,25 @@ class TestAgentCacheIdleResume:
         # Agent A: evicted from cache (soft) — terminal survives.
         # Agent B: session expired (hard) — terminal torn down.
         agent_a = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True,
-            skip_context_files=True, skip_memory=True,
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
             session_id="soft-session",
         )
         agent_b = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True,
-            skip_context_files=True, skip_memory=True,
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
             session_id="hard-session",
         )
 
@@ -1250,8 +1438,8 @@ class TestAgentCacheIdleResume:
         original_vm = _ra.cleanup_vm
         _ra.cleanup_vm = lambda tid: vm_calls.append(tid)
         try:
-            agent_a.release_clients()   # cache eviction
-            agent_b.close()              # session expiry
+            agent_a.release_clients()  # cache eviction
+            agent_b.close()  # session expiry
         finally:
             _ra.cleanup_vm = original_vm
             try:
@@ -1277,10 +1465,14 @@ class TestAgentCacheIdleResume:
         # Build an agent representing a stale (idle) session.
         SESSION_ID = "long-lived-user-session"
         old = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True,
-            skip_context_files=True, skip_memory=True,
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
             session_id=SESSION_ID,
         )
         old._last_activity_ts = 0.0  # force idle
@@ -1292,6 +1484,7 @@ class TestAgentCacheIdleResume:
 
         # Wait for the daemon thread doing release_clients() to finish.
         import time as _t
+
         _t.sleep(0.3)
 
         # Old agent's client is gone (soft cleanup fired).
@@ -1299,10 +1492,14 @@ class TestAgentCacheIdleResume:
 
         # User comes back — new agent built for the SAME session_id.
         new_agent = AIAgent(
-            model="anthropic/claude-sonnet-4", api_key="test",
-            base_url="https://openrouter.ai/api/v1", provider="openrouter",
-            max_iterations=5, quiet_mode=True,
-            skip_context_files=True, skip_memory=True,
+            model="anthropic/claude-sonnet-4",
+            api_key="test",
+            base_url="https://openrouter.ai/api/v1",
+            provider="openrouter",
+            max_iterations=5,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
             session_id=SESSION_ID,
         )
 
@@ -1464,7 +1661,13 @@ class TestAgentConfigSignatureUserId:
 
     def test_signature_changes_with_user_id(self):
         from gateway.run import GatewayRunner
-        runtime = {"provider": "anthropic", "api_key": "k", "base_url": "", "api_mode": "chat_completions"}
+
+        runtime = {
+            "provider": "anthropic",
+            "api_key": "k",
+            "base_url": "",
+            "api_mode": "chat_completions",
+        }
         sig_a = GatewayRunner._agent_config_signature(
             "claude-sonnet-4", runtime, ["hermes-telegram"], "", user_id="86701400"
         )
@@ -1475,7 +1678,13 @@ class TestAgentConfigSignatureUserId:
 
     def test_signature_stable_with_same_user_id(self):
         from gateway.run import GatewayRunner
-        runtime = {"provider": "anthropic", "api_key": "k", "base_url": "", "api_mode": "chat_completions"}
+
+        runtime = {
+            "provider": "anthropic",
+            "api_key": "k",
+            "base_url": "",
+            "api_mode": "chat_completions",
+        }
         sig_1 = GatewayRunner._agent_config_signature(
             "claude-sonnet-4", runtime, ["hermes-telegram"], "", user_id="86701400"
         )
@@ -1486,14 +1695,28 @@ class TestAgentConfigSignatureUserId:
 
     def test_signature_changes_with_user_id_alt(self):
         from gateway.run import GatewayRunner
-        runtime = {"provider": "anthropic", "api_key": "k", "base_url": "", "api_mode": "chat_completions"}
+
+        runtime = {
+            "provider": "anthropic",
+            "api_key": "k",
+            "base_url": "",
+            "api_mode": "chat_completions",
+        }
         sig_a = GatewayRunner._agent_config_signature(
-            "claude-sonnet-4", runtime, ["hermes-telegram"], "",
-            user_id="86701400", user_id_alt="@igor_tg",
+            "claude-sonnet-4",
+            runtime,
+            ["hermes-telegram"],
+            "",
+            user_id="86701400",
+            user_id_alt="@igor_tg",
         )
         sig_b = GatewayRunner._agent_config_signature(
-            "claude-sonnet-4", runtime, ["hermes-telegram"], "",
-            user_id="86701400", user_id_alt="@erosika_tg",
+            "claude-sonnet-4",
+            runtime,
+            ["hermes-telegram"],
+            "",
+            user_id="86701400",
+            user_id_alt="@erosika_tg",
         )
         assert sig_a != sig_b
 
@@ -1505,12 +1728,25 @@ class TestAgentConfigSignatureUserId:
         the rollout of this fix.
         """
         from gateway.run import GatewayRunner
-        runtime = {"provider": "anthropic", "api_key": "k", "base_url": "", "api_mode": "chat_completions"}
+
+        runtime = {
+            "provider": "anthropic",
+            "api_key": "k",
+            "base_url": "",
+            "api_mode": "chat_completions",
+        }
         sig_implicit = GatewayRunner._agent_config_signature(
-            "claude-sonnet-4", runtime, ["hermes-telegram"], "",
+            "claude-sonnet-4",
+            runtime,
+            ["hermes-telegram"],
+            "",
         )
         sig_explicit_none = GatewayRunner._agent_config_signature(
-            "claude-sonnet-4", runtime, ["hermes-telegram"], "",
-            user_id=None, user_id_alt=None,
+            "claude-sonnet-4",
+            runtime,
+            ["hermes-telegram"],
+            "",
+            user_id=None,
+            user_id_alt=None,
         )
         assert sig_implicit == sig_explicit_none
