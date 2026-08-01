@@ -48,7 +48,6 @@ user is seen through different apps in the future.
 from __future__ import annotations
 
 import asyncio
-import collections
 import hashlib
 import hmac
 import itertools
@@ -1409,8 +1408,6 @@ class FeishuAdapter(BasePlatformAdapter):
     """Feishu/Lark bot adapter."""
 
     MAX_MESSAGE_LENGTH = 8000
-    # Max distinct chat IDs retained in _chat_locks before LRU eviction kicks in.
-    CHAT_LOCK_MAX_SIZE: int = 1000
     # Threshold for detecting Feishu client-side message splits.
     # When a chunk is near the ~4096-char practical limit, a continuation
     # is almost certain.
@@ -1448,7 +1445,7 @@ class FeishuAdapter(BasePlatformAdapter):
         self._pending_inbound_lock = threading.Lock()
         self._pending_drain_scheduled = False
         self._pending_inbound_max_depth = 1000  # cap queue; drop oldest beyond
-        self._chat_locks: "collections.OrderedDict[str, asyncio.Lock]" = collections.OrderedDict()  # chat_id → lock (per-chat serial processing, LRU-bounded)
+        self._chat_locks: Dict[str, asyncio.Lock] = {}  # chat_id → lock (per-chat serial processing)
         self._sent_message_ids_to_chat: Dict[str, str] = {}  # message_id → chat_id (for reaction routing)
         self._sent_message_id_order: List[str] = []  # LRU order for _sent_message_ids_to_chat
         self._chat_info_cache: Dict[str, Dict[str, Any]] = {}
@@ -1517,10 +1514,8 @@ class FeishuAdapter(BasePlatformAdapter):
             connection_mode=str(
                 extra.get("connection_mode") or os.getenv("FEISHU_CONNECTION_MODE", "websocket")
             ).strip().lower(),
-            encrypt_key=str(extra.get("encrypt_key") or os.getenv("FEISHU_ENCRYPT_KEY", "")).strip(),
-            verification_token=str(
-                extra.get("verification_token") or os.getenv("FEISHU_VERIFICATION_TOKEN", "")
-            ).strip(),
+            encrypt_key=os.getenv("FEISHU_ENCRYPT_KEY", "").strip(),
+            verification_token=os.getenv("FEISHU_VERIFICATION_TOKEN", "").strip(),
             group_policy=os.getenv("FEISHU_GROUP_POLICY", "allowlist").strip().lower(),
             allowed_group_users=frozenset(
                 item.strip()
@@ -1645,11 +1640,6 @@ class FeishuAdapter(BasePlatformAdapter):
             logger.error(
                 "[Feishu] Unsupported FEISHU_CONNECTION_MODE=%s. Supported modes: websocket, webhook.",
                 self._connection_mode,
-            )
-            return False
-        if self._connection_mode == "webhook" and not (self._verification_token or self._encrypt_key):
-            logger.error(
-                "[Feishu] Webhook mode requires FEISHU_VERIFICATION_TOKEN or FEISHU_ENCRYPT_KEY."
             )
             return False
 
@@ -2109,9 +2099,10 @@ class FeishuAdapter(BasePlatformAdapter):
             return SendResult(success=False, error=f"Image file not found: {image_path}")
 
         try:
+            import aiofiles
             import io as _io
-            with open(image_path, "rb") as f:
-                image_bytes = f.read()
+            async with aiofiles.open(image_path, "rb") as f:
+                image_bytes = await f.read()
             # Wrap in BytesIO so lark SDK's MultipartEncoder can read .name and .tell()
             image_file = _io.BytesIO(image_bytes)
             image_file.name = os.path.basename(image_path)
@@ -2573,44 +2564,13 @@ class FeishuAdapter(BasePlatformAdapter):
         if approval_id is None:
             logger.debug("[Feishu] Card action missing approval_id, ignoring")
             return P2CardActionTriggerResponse() if P2CardActionTriggerResponse else None
-        state = self._approval_state.get(approval_id)
-        if not state:
-            logger.debug("[Feishu] Approval %s already resolved or unknown", approval_id)
-            return P2CardActionTriggerResponse() if P2CardActionTriggerResponse else None
         choice = _APPROVAL_CHOICE_MAP.get(action_value.get("hermes_action"), "deny")
 
         operator = getattr(event, "operator", None)
         open_id = str(getattr(operator, "open_id", "") or "")
-        sender_id = SimpleNamespace(open_id=open_id, user_id=str(getattr(operator, "user_id", "") or ""))
-        if not self._allow_group_message(sender_id, state.get("chat_id", ""), is_bot=False):
-            logger.warning("[Feishu] Unauthorized approval click by %s", open_id or "<unknown>")
-            return P2CardActionTriggerResponse() if P2CardActionTriggerResponse else None
-
-        callback_chat_id = str(getattr(getattr(event, "context", None), "open_chat_id", "") or "")
-        expected_chat_id = str(state.get("chat_id", "") or "")
-        if callback_chat_id and expected_chat_id and callback_chat_id != expected_chat_id:
-            logger.warning(
-                "[Feishu] Approval callback chat mismatch for %s (expected=%s, got=%s)",
-                approval_id,
-                expected_chat_id,
-                callback_chat_id,
-            )
-            return P2CardActionTriggerResponse() if P2CardActionTriggerResponse else None
-
         user_name = self._get_cached_sender_name(open_id) or open_id
 
-        chat_context = getattr(event, "context", None)
-        chat_id = str(getattr(chat_context, "open_chat_id", "") or "")
-        if not self._submit_on_loop(
-            loop,
-            self._resolve_approval(
-                approval_id=approval_id,
-                choice=choice,
-                user_name=user_name,
-                open_id=open_id,
-                chat_id=chat_id,
-            ),
-        ):
+        if not self._submit_on_loop(loop, self._resolve_approval(approval_id, choice, user_name)):
             return P2CardActionTriggerResponse() if P2CardActionTriggerResponse else None
 
         if P2CardActionTriggerResponse is None:
@@ -2658,33 +2618,11 @@ class FeishuAdapter(BasePlatformAdapter):
             response.card = card
         return response
 
-    async def _resolve_approval(
-        self,
-        approval_id: Any,
-        choice: str,
-        user_name: str,
-        *,
-        open_id: str = "",
-        chat_id: str = "",
-    ) -> None:
+    async def _resolve_approval(self, approval_id: Any, choice: str, user_name: str) -> None:
         """Pop approval state and unblock the waiting agent thread."""
-        state = self._approval_state.get(approval_id)
-        if not state:
-            logger.debug("[Feishu] Approval %s already resolved or unknown", approval_id)
-            return
-        if not self._is_interactive_operator_authorized(open_id):
-            logger.warning("[Feishu] Unauthorized approval click by %s for approval %s", open_id or "<unknown>", approval_id)
-            return
-        expected_chat_id = str(state.get("chat_id", "") or "")
-        if expected_chat_id and chat_id and expected_chat_id != chat_id:
-            logger.warning(
-                "[Feishu] Approval %s chat mismatch (expected=%s, got=%s)",
-                approval_id, expected_chat_id, chat_id,
-            )
-            return
         state = self._approval_state.pop(approval_id, None)
         if not state:
-            logger.debug("[Feishu] Approval %s already resolved while validating callback", approval_id)
+            logger.debug("[Feishu] Approval %s already resolved or unknown", approval_id)
             return
         try:
             from tools.approval import resolve_gateway_approval
@@ -2838,28 +2776,11 @@ class FeishuAdapter(BasePlatformAdapter):
     # =========================================================================
 
     def _get_chat_lock(self, chat_id: str) -> asyncio.Lock:
-        """Return (creating if needed) the per-chat asyncio.Lock for serial message processing.
-
-        Bounded with LRU eviction so a long-running gateway that sees many
-        distinct chats does not grow ``_chat_locks`` without limit. Locks that
-        are currently held are never evicted; if every entry is locked we fall
-        back to dropping the least-recently-used one.
-        """
+        """Return (creating if needed) the per-chat asyncio.Lock for serial message processing."""
         lock = self._chat_locks.get(chat_id)
-        if lock is not None:
-            self._chat_locks.move_to_end(chat_id)
-            return lock
-        if len(self._chat_locks) >= self.CHAT_LOCK_MAX_SIZE:
-            evicted = False
-            for key in list(self._chat_locks):
-                if not self._chat_locks[key].locked():
-                    self._chat_locks.pop(key)
-                    evicted = True
-                    break
-            if not evicted:
-                self._chat_locks.pop(next(iter(self._chat_locks)))
-        lock = asyncio.Lock()
-        self._chat_locks[chat_id] = lock
+        if lock is None:
+            lock = asyncio.Lock()
+            self._chat_locks[chat_id] = lock
         return lock
 
     async def _handle_message_with_guards(self, event: MessageEvent) -> None:
@@ -3309,6 +3230,11 @@ class FeishuAdapter(BasePlatformAdapter):
             self._record_webhook_anomaly(remote_ip, "400")
             return web.json_response({"code": 400, "msg": "invalid json"}, status=400)
 
+        # URL verification challenge — respond before other checks so that Feishu's
+        # subscription setup works even before encrypt_key is wired.
+        if payload.get("type") == "url_verification":
+            return web.json_response({"challenge": payload.get("challenge", "")})
+
         # Verification token check — second layer of defence beyond signature (matches openclaw).
         if self._verification_token:
             header = payload.get("header") or {}
@@ -3317,13 +3243,6 @@ class FeishuAdapter(BasePlatformAdapter):
                 logger.warning("[Feishu] Webhook rejected: invalid verification token from %s", remote_ip)
                 self._record_webhook_anomaly(remote_ip, "401-token")
                 return web.Response(status=401, text="Invalid verification token")
-
-        # URL verification challenge — Feishu includes the verification token in
-        # challenge requests. Validate the token (above) before reflecting the
-        # challenge so an unauthenticated remote request cannot prove endpoint
-        # control by getting attacker-supplied challenge data echoed back.
-        if payload.get("type") == "url_verification":
-            return web.json_response({"challenge": payload.get("challenge", "")})
 
         # Timing-safe signature verification (only enforced when encrypt_key is set).
         if self._encrypt_key and not self._is_webhook_signature_valid(request.headers, body_bytes):
@@ -4337,14 +4256,17 @@ class FeishuAdapter(BasePlatformAdapter):
             requested_message_type=outbound_message_type,
         )
         try:
-            with open(file_path, "rb") as file_obj:
-                body = self._build_file_upload_body(
-                    file_type=upload_file_type,
-                    file_name=display_name,
-                    file=file_obj,
-                )
-                request = self._build_file_upload_request(body)
-                upload_response = await asyncio.to_thread(self._client.im.v1.file.create, request)
+            def _do_upload() -> Any:
+                with open(file_path, "rb") as file_obj:
+                    body = self._build_file_upload_body(
+                        file_type=upload_file_type,
+                        file_name=display_name,
+                        file=file_obj,
+                    )
+                    request = self._build_file_upload_request(body)
+                    return self._client.im.v1.file.create(request)
+
+            upload_response = await asyncio.to_thread(_do_upload)
             file_key = self._extract_response_field(upload_response, "file_key")
             if not file_key:
                 return self._response_error_result(

@@ -17,6 +17,7 @@ from tools.approval import (
     is_approved,
     load_permanent,
     prompt_dangerous_approval,
+    submit_pending,
 )
 
 

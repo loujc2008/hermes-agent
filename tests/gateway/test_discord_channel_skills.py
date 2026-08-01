@@ -1,5 +1,6 @@
 """Tests for Discord channel_skill_bindings auto-skill resolution."""
 from unittest.mock import MagicMock
+import pytest
 
 
 def _make_adapter():

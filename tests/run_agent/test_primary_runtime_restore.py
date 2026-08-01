@@ -10,8 +10,10 @@ Verifies that:
 """
 
 import time
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch, PropertyMock
 
+import pytest
 
 from run_agent import AIAgent
 

@@ -1,5 +1,7 @@
 """Verify load_transcript returns SQLite messages without any JSONL file."""
+from pathlib import Path
 
+import pytest
 
 from gateway.session import SessionStore
 from gateway.config import GatewayConfig
