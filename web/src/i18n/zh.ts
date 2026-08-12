@@ -126,7 +126,6 @@ export const zh: Translations = {
 
   sessions: {
     title: "会话",
-    history: "历史",
     overview: "概览",
     searchPlaceholder: "搜索消息内容...",
     noSessions: "暂无会话",
@@ -418,7 +417,7 @@ export const zh: Translations = {
   },
 
   language: {
-    switchTo: "切换语言",
+    switchTo: "切换到英文",
   },
 
   theme: {

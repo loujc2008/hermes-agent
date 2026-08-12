@@ -1,9 +1,10 @@
-import { Typography } from "@nous-research/ui/ui/components/typography/index";
-import type { StatusResponse } from "@/lib/api";
+import { Typography } from "@/components/NouiTypography";
+import { useSidebarStatus } from "@/hooks/useSidebarStatus";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n";
 
-export function SidebarFooter({ status }: SidebarFooterProps) {
+export function SidebarFooter() {
+  const status = useSidebarStatus();
   const { t } = useI18n();
 
   return (
@@ -35,8 +36,4 @@ export function SidebarFooter({ status }: SidebarFooterProps) {
       </a>
     </div>
   );
-}
-
-interface SidebarFooterProps {
-  status: StatusResponse | null;
 }

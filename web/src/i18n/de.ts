@@ -127,7 +127,6 @@ export const de: Translations = {
 
   sessions: {
     title: "Sitzungen",
-    history: "Verlauf",
     overview: "Übersicht",
     searchPlaceholder: "Nachrichteninhalt suchen...",
     noSessions: "Noch keine Sitzungen",
@@ -423,7 +422,7 @@ export const de: Translations = {
   },
 
   language: {
-    switchTo: "Sprache wechseln",
+    switchTo: "Zu Englisch wechseln",
   },
 
   theme: {
