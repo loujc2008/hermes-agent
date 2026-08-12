@@ -11,6 +11,7 @@ dispatcher like Telegram — the auth + resolution path is the same:
   · already-resolved or unauthorized → ephemeral "this prompt..." reply
 """
 
+import asyncio
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -169,6 +170,7 @@ class TestClarifyChoiceResolve:
     async def test_choice_falls_back_to_label_text_when_entry_missing(self):
         """If the gateway entry vanished (race / stale view), the button's
         own choice text is used as the response."""
+        from tools import clarify_gateway as cm
         # Note: no cm.register() — entry intentionally absent
 
         view = ClarifyChoiceView(

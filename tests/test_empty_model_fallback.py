@@ -1,6 +1,7 @@
 """Tests for empty model fallback — when provider is configured but model is missing."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+import pytest
 
 
 class TestGetDefaultModelForProvider:

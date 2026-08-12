@@ -13,6 +13,7 @@ runtime via a thread-local whitelist on the existing
 that caused the prefix-cache miss.
 """
 
+import threading
 from unittest.mock import patch
 
 
