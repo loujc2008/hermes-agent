@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
 import type { StatusResponse } from "@/lib/api";
+import { useSidebarStatus } from "@/hooks/useSidebarStatus";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n";
 
 /** Gateway + session summary for the System sidebar block (no separate strip chrome). */
-export function SidebarStatusStrip({ status }: SidebarStatusStripProps) {
+export function SidebarStatusStrip() {
+  const status = useSidebarStatus();
   const { t } = useI18n();
 
   if (status === null) {
@@ -48,7 +50,7 @@ export function SidebarStatusStrip({ status }: SidebarStatusStripProps) {
   );
 }
 
-export function gatewayLine(
+function gatewayLine(
   status: StatusResponse,
   t: ReturnType<typeof useI18n>["t"],
 ): { label: string; tone: string } {
@@ -65,8 +67,4 @@ export function gatewayLine(
   return status.gateway_running
     ? { label: g.running, tone: "text-success" }
     : { label: g.off, tone: "text-muted-foreground" };
-}
-
-interface SidebarStatusStripProps {
-  status: StatusResponse | null;
 }

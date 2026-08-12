@@ -8,6 +8,7 @@ before the terminal query, which is the path most users hit.
 
 from __future__ import annotations
 
+import importlib
 
 import pytest
 
