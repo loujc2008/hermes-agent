@@ -298,6 +298,7 @@ def test_dispatcher_tick_does_not_call_init_db(kanban_home, monkeypatch):
     """
     import hermes_cli.kanban_db as kb
     from gateway.run import GatewayRunner
+    from unittest.mock import patch
 
     runner = object.__new__(GatewayRunner)
 

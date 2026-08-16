@@ -5,6 +5,7 @@ the _send_update_notification startup hook (sends results after restart).
 """
 
 import json
+import os
 from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock
 
@@ -73,6 +74,7 @@ class TestHandleUpdateCommand:
             pass
 
         # Simpler approach — mock at method level using a wrapper
+        from gateway.run import GatewayRunner
         runner = _make_runner()
 
         with patch("gateway.run._hermes_home", tmp_path):

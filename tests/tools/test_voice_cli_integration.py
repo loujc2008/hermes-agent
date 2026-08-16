@@ -2,6 +2,7 @@
 state management, streaming TTS activation, voice message prefix, _vprint."""
 
 import ast
+import os
 import queue
 import threading
 from types import SimpleNamespace

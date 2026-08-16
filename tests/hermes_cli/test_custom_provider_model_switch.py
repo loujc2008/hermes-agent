@@ -6,7 +6,8 @@ immediately when provider_info had a saved ``model`` field, making it
 impossible to switch models on multi-model endpoints.
 """
 
-from unittest.mock import patch
+import os
+from unittest.mock import patch, MagicMock, call
 
 import pytest
 
