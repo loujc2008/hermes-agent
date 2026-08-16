@@ -9,8 +9,6 @@ from unittest.mock import patch
 
 import pytest
 
-from hermes_cli.nous_account import NousPortalAccountInfo
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS_DIR = REPO_ROOT / "tools"
@@ -71,17 +69,10 @@ def _enable_managed_nous_tools(monkeypatch):
     The _install_fake_tools_package() helper resets and reimports tool modules,
     so a simple monkeypatch on tool_backend_helpers doesn't survive.  We patch
     the *source* modules that the reimported modules will import from — both
-    hermes_cli.nous_account — so the function body returns True.
+    hermes_cli.auth and hermes_cli.models — so the function body returns True.
     """
-    monkeypatch.setattr(
-        "hermes_cli.nous_account.get_nous_portal_account_info",
-        lambda: NousPortalAccountInfo(
-            logged_in=True,
-            source="jwt",
-            fresh=False,
-            paid_service_access=True,
-        ),
-    )
+    monkeypatch.setattr("hermes_cli.auth.get_nous_auth_status", lambda: {"logged_in": True})
+    monkeypatch.setattr("hermes_cli.models.check_nous_free_tier", lambda: False)
 
 
 def _install_fake_tools_package():

@@ -25,6 +25,7 @@ See: https://github.com/NousResearch/hermes-agent/issues/27344
 
 from __future__ import annotations
 
+import pytest
 
 from agent.error_classifier import FailoverReason, classify_api_error
 
