@@ -26,7 +26,8 @@ def _patch_info(tmp_path, config_yaml, model, runtime):
 
 class TestFormatSessionInfo:
 
-    def test_includes_model_name(self, runner, tmp_path):
+    @patch("agent.models_dev.fetch_models_dev", return_value={})
+    def test_includes_model_name(self, mock_fetch, runner, tmp_path):
         p1, p2, p3 = _patch_info(tmp_path, "model:\n  default: anthropic/claude-opus-4.6\n  provider: openrouter\n",
                                   "anthropic/claude-opus-4.6",
                                   {"provider": "openrouter", "base_url": "https://openrouter.ai/api/v1", "api_key": "k"})
@@ -34,7 +35,8 @@ class TestFormatSessionInfo:
             info = runner._format_session_info()
         assert "claude-opus-4.6" in info
 
-    def test_includes_provider(self, runner, tmp_path):
+    @patch("agent.models_dev.fetch_models_dev", return_value={})
+    def test_includes_provider(self, mock_fetch, runner, tmp_path):
         p1, p2, p3 = _patch_info(tmp_path, "model:\n  default: test-model\n  provider: openrouter\n",
                                   "test-model",
                                   {"provider": "openrouter", "base_url": "", "api_key": ""})
@@ -42,7 +44,8 @@ class TestFormatSessionInfo:
             info = runner._format_session_info()
         assert "openrouter" in info
 
-    def test_config_context_length(self, runner, tmp_path):
+    @patch("agent.models_dev.fetch_models_dev", return_value={})
+    def test_config_context_length(self, mock_fetch, runner, tmp_path):
         p1, p2, p3 = _patch_info(tmp_path, "model:\n  default: test-model\n  context_length: 32768\n",
                                   "test-model",
                                   {"provider": "custom", "base_url": "", "api_key": ""})
@@ -51,7 +54,8 @@ class TestFormatSessionInfo:
         assert "32K" in info
         assert "config" in info
 
-    def test_default_fallback_hint(self, runner, tmp_path):
+    @patch("agent.models_dev.fetch_models_dev", return_value={})
+    def test_default_fallback_hint(self, mock_fetch, runner, tmp_path):
         p1, p2, p3 = _patch_info(tmp_path, "model:\n  default: unknown-model-xyz\n",
                                   "unknown-model-xyz",
                                   {"provider": "", "base_url": "", "api_key": ""})
@@ -60,7 +64,8 @@ class TestFormatSessionInfo:
         assert "256K" in info
         assert "model.context_length" in info
 
-    def test_local_endpoint_shown(self, runner, tmp_path):
+    @patch("agent.models_dev.fetch_models_dev", return_value={})
+    def test_local_endpoint_shown(self, mock_fetch, runner, tmp_path):
         p1, p2, p3 = _patch_info(
             tmp_path,
             "model:\n  default: qwen3:8b\n  provider: custom\n  base_url: http://localhost:11434/v1\n  context_length: 8192\n",
@@ -71,7 +76,8 @@ class TestFormatSessionInfo:
         assert "localhost:11434" in info
         assert "8K" in info
 
-    def test_cloud_endpoint_hidden(self, runner, tmp_path):
+    @patch("agent.models_dev.fetch_models_dev", return_value={})
+    def test_cloud_endpoint_hidden(self, mock_fetch, runner, tmp_path):
         p1, p2, p3 = _patch_info(tmp_path, "model:\n  default: test-model\n  provider: openrouter\n",
                                   "test-model",
                                   {"provider": "openrouter", "base_url": "https://openrouter.ai/api/v1", "api_key": "k"})
@@ -79,7 +85,8 @@ class TestFormatSessionInfo:
             info = runner._format_session_info()
         assert "Endpoint" not in info
 
-    def test_million_context_format(self, runner, tmp_path):
+    @patch("agent.models_dev.fetch_models_dev", return_value={})
+    def test_million_context_format(self, mock_fetch, runner, tmp_path):
         p1, p2, p3 = _patch_info(tmp_path, "model:\n  default: test-model\n  context_length: 1000000\n",
                                   "test-model",
                                   {"provider": "", "base_url": "", "api_key": ""})
@@ -87,7 +94,8 @@ class TestFormatSessionInfo:
             info = runner._format_session_info()
         assert "1.0M" in info
 
-    def test_missing_config(self, runner, tmp_path):
+    @patch("agent.models_dev.fetch_models_dev", return_value={})
+    def test_missing_config(self, mock_fetch, runner, tmp_path):
         """No config.yaml should not crash."""
         p1, p2, p3 = _patch_info(tmp_path, None,  # don't create config
                                   "anthropic/claude-sonnet-4.6",
@@ -97,7 +105,8 @@ class TestFormatSessionInfo:
         assert "Model" in info
         assert "Context" in info
 
-    def test_runtime_resolution_failure_doesnt_crash(self, runner, tmp_path):
+    @patch("agent.models_dev.fetch_models_dev", return_value={})
+    def test_runtime_resolution_failure_doesnt_crash(self, mock_fetch, runner, tmp_path):
         """If runtime resolution raises, should still produce output."""
         cfg_path = tmp_path / "config.yaml"
         cfg_path.write_text("model:\n  default: test-model\n  context_length: 4096\n")

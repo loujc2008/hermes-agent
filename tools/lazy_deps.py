@@ -86,12 +86,11 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
     # when model.auth_mode=entra_id is selected; key-based azure-foundry
     # users never pay this import.
     "provider.azure_identity": ("azure-identity==1.25.3",),
-
     # ─── Web search backends ───────────────────────────────────────────────
     "search.exa": ("exa-py==2.10.2",),
     "search.firecrawl": ("firecrawl-py==4.17.0",),
     "search.parallel": ("parallel-web==0.4.2",),
-
+    "terminal.vercel": ("vercel==0.5.7",),
     # ─── TTS providers ─────────────────────────────────────────────────────
     # Pinned to exact versions to match pyproject.toml's no-ranges policy
     # (see comment at top of [project.dependencies]). When bumping, update
@@ -104,7 +103,6 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
     "tts.mistral": ("mistralai==2.4.8",),
     "tts.edge": ("edge-tts==7.2.7",),
     "tts.elevenlabs": ("elevenlabs==1.59.0",),
-
     # ─── Speech-to-text providers ──────────────────────────────────────────
     "stt.mistral": ("mistralai==2.4.8",),
     "stt.faster_whisper": (
@@ -112,14 +110,11 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
         "sounddevice==0.5.5",
         "numpy==2.4.3",
     ),
-
     # ─── Image generation backends ─────────────────────────────────────────
     "image.fal": ("fal-client==0.13.1",),
-
     # ─── Memory providers ──────────────────────────────────────────────────
     "memory.honcho": ("honcho-ai==2.0.1",),
     "memory.hindsight": ("hindsight-client==0.6.1",),
-
     # ─── Messaging platforms (lazy-installable on demand) ──────────────────
     "platform.telegram": ("python-telegram-bot[webhooks]==22.6",),
     # brotlicffi gives aiohttp a working 2-arg Decompressor.process() for
@@ -153,11 +148,9 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
     # defusedxml only; aiohttp/httpx are core dependencies of every messaging
     # adapter and ship via `platform.discord` / `platform.slack` / etc.
     "platform.wecom_callback": ("defusedxml==0.7.1",),
-
     # ─── Terminal backends ─────────────────────────────────────────────────
     "terminal.modal": ("modal==1.3.4",),
     "terminal.daytona": ("daytona==0.155.0",),
-
     # ─── Skills ────────────────────────────────────────────────────────────
     "skill.google_workspace": (
         "google-api-python-client==2.194.0",
@@ -165,7 +158,6 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
         "google-auth-httplib2==0.3.1",
     ),
     "skill.youtube": ("youtube-transcript-api==1.2.4",),
-
     # ─── Tools ─────────────────────────────────────────────────────────────
     # ACP adapter (VS Code / Zed / JetBrains integration)
     "tool.acp": ("agent-client-protocol==0.9.0",),
@@ -182,8 +174,8 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
 # version range. Reject anything that looks like a URL, file path, or shell
 # metacharacter.
 _SAFE_SPEC = re.compile(
-    r"^[A-Za-z0-9_][A-Za-z0-9_.\-]*"        # package name
-    r"(?:\[[A-Za-z0-9_,\-]+\])?"            # optional [extras]
+    r"^[A-Za-z0-9_][A-Za-z0-9_.\-]*"  # package name
+    r"(?:\[[A-Za-z0-9_,\-]+\])?"  # optional [extras]
     r"(?:[<>=!~]=?[A-Za-z0-9_.\-+,*<>=!~]+)?"  # optional version specifier
     r"$"
 )
@@ -234,6 +226,7 @@ def _allow_lazy_installs() -> bool:
         return False
     try:
         from hermes_cli.config import load_config
+
         cfg = load_config()
     except Exception:
         return True
@@ -274,7 +267,7 @@ def _specifier_from_spec(spec: str) -> str:
     m = re.match(r"^[A-Za-z0-9_][A-Za-z0-9_.\-]*(?:\[[A-Za-z0-9_,\-]+\])?", spec)
     if not m:
         return ""
-    return spec[m.end():]
+    return spec[m.end() :]
 
 
 def _is_satisfied(spec: str) -> bool:
@@ -359,7 +352,10 @@ def _venv_pip_install(specs: tuple[str, ...], *, timeout: int = 300) -> _Install
         try:
             r = subprocess.run(
                 [uv_bin, "pip", "install", *specs],
-                capture_output=True, text=True, timeout=timeout, env=uv_env,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                env=uv_env,
             )
             if r.returncode == 0:
                 return _InstallResult(True, r.stdout or "", r.stderr or "")
@@ -372,7 +368,9 @@ def _venv_pip_install(specs: tuple[str, ...], *, timeout: int = 300) -> _Install
     try:
         probe = subprocess.run(
             pip_cmd + ["--version"],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True,
+            text=True,
+            timeout=15,
         )
         if probe.returncode != 0:
             raise FileNotFoundError("pip not in venv")
@@ -380,16 +378,22 @@ def _venv_pip_install(specs: tuple[str, ...], *, timeout: int = 300) -> _Install
         try:
             subprocess.run(
                 [sys.executable, "-m", "ensurepip", "--upgrade", "--default-pip"],
-                capture_output=True, text=True, timeout=120, check=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=True,
             )
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-            return _InstallResult(False, "",
-                                  f"pip not available and ensurepip failed: {e}")
+            return _InstallResult(
+                False, "", f"pip not available and ensurepip failed: {e}"
+            )
 
     try:
         r = subprocess.run(
             pip_cmd + ["install", *specs],
-            capture_output=True, text=True, timeout=timeout,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
         )
         return _InstallResult(r.returncode == 0, r.stdout or "", r.stderr or "")
     except subprocess.TimeoutExpired as e:
@@ -441,23 +445,27 @@ def ensure(feature: str, *, prompt: bool = True) -> None:
     for spec in missing:
         if not _spec_is_safe(spec):
             raise FeatureUnavailable(
-                feature, missing,
-                f"refusing to install unsafe spec {spec!r}"
+                feature, missing, f"refusing to install unsafe spec {spec!r}"
             )
 
     if not _allow_lazy_installs():
         raise FeatureUnavailable(
-            feature, missing,
-            "lazy installs disabled (security.allow_lazy_installs=false)"
+            feature,
+            missing,
+            "lazy installs disabled (security.allow_lazy_installs=false)",
         )
 
     if prompt and sys.stdin.isatty() and sys.stdout.isatty():
         spec_list = ", ".join(missing)
         try:
-            answer = input(
-                f"\nFeature {feature!r} requires: {spec_list}\n"
-                f"Install into the active venv now? [Y/n] "
-            ).strip().lower()
+            answer = (
+                input(
+                    f"\nFeature {feature!r} requires: {spec_list}\n"
+                    f"Install into the active venv now? [Y/n] "
+                )
+                .strip()
+                .lower()
+            )
         except (EOFError, KeyboardInterrupt):
             answer = "n"
         if answer and answer not in {"y", "yes"}:
@@ -475,14 +483,14 @@ def ensure(feature: str, *, prompt: bool = True) -> None:
             # Clip to a readable size — pip can dump pages of resolution traces.
             snippet = snippet[-2000:]
         raise FeatureUnavailable(
-            feature, missing,
-            f"pip install failed: {snippet or 'no error output'}"
+            feature, missing, f"pip install failed: {snippet or 'no error output'}"
         )
 
     # Verify post-install. importlib.metadata caches per-process, so if we
     # just installed something the cache may not see it without a refresh.
     try:
         import importlib.metadata as _md
+
         if hasattr(_md, "_cache_clear"):
             _md._cache_clear()  # type: ignore[attr-defined]
     except Exception:
@@ -491,9 +499,10 @@ def ensure(feature: str, *, prompt: bool = True) -> None:
     still_missing = feature_missing(feature)
     if still_missing:
         raise FeatureUnavailable(
-            feature, still_missing,
+            feature,
+            still_missing,
             "install reported success but packages still not importable "
-            "(may require Python restart)"
+            "(may require Python restart)",
         )
 
     logger.info("Lazy install complete for feature %r", feature)
