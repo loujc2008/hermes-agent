@@ -63,12 +63,19 @@ class TestResumeQuietStderr:
         db.get_session.return_value = None
         cli = _make_cli(quiet=False, db=db)
 
+        import cli as hermes_cli_module
+
         with patch("cli._prepare_deferred_agent_startup"):
-            result = cli._init_agent()
+            # Disable output history suppression during the test so prints work
+            with patch.object(hermes_cli_module, "_OUTPUT_HISTORY_SUPPRESSED", False):
+                # Ensure _pt_print fallback goes to std print so we can capture it
+                with patch("cli._pt_print", side_effect=Exception("No PT")):
+                    result = cli._init_agent()
 
         captured = capsys.readouterr()
         assert result is False
         # Interactive mode keeps the existing _cprint path → stdout.
+        # Fallback uses standard print when get_app_or_none raises an Exception
         assert "Session not found" in captured.out
 
     def test_resumed_banner_goes_to_stderr_in_quiet_mode(self, capsys):
