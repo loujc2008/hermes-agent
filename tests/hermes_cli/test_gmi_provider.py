@@ -80,6 +80,14 @@ class TestGmiConfigRegistry:
 
 
 class TestGmiModelCatalog:
+    def test_static_model_fallback_exists(self):
+        assert "gmi" in _PROVIDER_MODELS
+        models = _PROVIDER_MODELS["gmi"]
+        assert "zai-org/GLM-5.1-FP8" in models
+        assert "deepseek-ai/DeepSeek-V3.2" in models
+        assert "moonshotai/Kimi-K2.5" in models
+        assert "anthropic/claude-sonnet-4.6" in models
+
     def test_canonical_provider_entry(self):
         slugs = [p.slug for p in CANONICAL_PROVIDERS]
         assert "gmi" in slugs
