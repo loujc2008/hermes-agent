@@ -375,7 +375,7 @@ class TestExtractCacheBustingConfig:
         assert first["honcho.user_peer_aliases"] == [("123", "eri")]
         assert parse_calls == [config_path]
 
-        config_path.write_text("{\n  \"changed\": true\n}")
+        import os, time; time.sleep(0.01); config_path.write_text("{\n  \"changed\": true\n}"); os.utime(config_path, None)
         third = GatewayRunner._extract_honcho_cache_busting_config()
 
         assert third == first
