@@ -90,7 +90,7 @@ class TestStaleOAuthTokenDetection:
         )
 
         # Simulate user picks "1" (use existing)
-        monkeypatch.setattr("builtins.input", lambda _: "1")
+        monkeypatch.setattr("builtins.input", lambda _: "1"); monkeypatch.setattr("hermes_cli.auth._prompt_model_selection", lambda model_list, current_model: model_list[0])
 
         from hermes_cli.main import _model_flow_anthropic
         cfg = {}
@@ -134,7 +134,7 @@ class TestStaleOAuthTokenDetection:
         )
 
         # Simulate user picks "1" (use existing)
-        monkeypatch.setattr("builtins.input", lambda _: "1")
+        monkeypatch.setattr("builtins.input", lambda _: "1"); monkeypatch.setattr("hermes_cli.auth._prompt_model_selection", lambda model_list, current_model: model_list[0])
 
         from hermes_cli.main import _model_flow_anthropic
         cfg = {}
